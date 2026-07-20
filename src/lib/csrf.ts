@@ -20,7 +20,12 @@ export function csrfMiddleware(req: Request, res: Response, next: NextFunction):
   const headerToken = req.headers["x-csrf-token"] as string | undefined;
   const cookieToken = req.cookies?.csrf_token as string | undefined;
 
-  if (!headerToken || !cookieToken || !crypto.timingSafeEqual(Buffer.from(headerToken), Buffer.from(cookieToken))) {
+  if (!headerToken || !cookieToken || headerToken.length !== cookieToken.length) {
+    res.status(403).json({ message: "CSRF token inválido." });
+    return;
+  }
+
+  if (!crypto.timingSafeEqual(Buffer.from(headerToken), Buffer.from(cookieToken))) {
     res.status(403).json({ message: "CSRF token inválido." });
     return;
   }

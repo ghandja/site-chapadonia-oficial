@@ -40,6 +40,13 @@ function auditLog(message: string, ...args: any[]) {
     formatted = formatted.replace("{}", String(arg));
   }
   logger.info({ audit: true }, formatted);
+  // Persist to audit_log table (fire & forget)
+  if (pool) {
+    pool.query(
+      "INSERT INTO audit_log (action, details) VALUES (?, ?)",
+      [formatted.substring(0, 200), JSON.stringify({ args })]
+    ).catch(() => {});
+  }
 }
 
 // Crypto and Token helpers
@@ -1514,21 +1521,14 @@ async function startServer() {
 
   // 5. Auth: Register
   app.post("/api/auth/register", authLimiter, async (req, res) => {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ message: "Por favor, preencha todos os campos obrigatórios." });
+    const parsed = registerSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Dados inválidos.",
+        errors: parsed.error.issues.map((i) => ({ field: i.path.join("."), message: i.message })),
+      });
     }
-
-    // Validate email
-    if (!validateEmail(email)) {
-      return res.status(400).json({ message: "Formato de e-mail inválido." });
-    }
-
-    // Validate password
-    const pwCheck = validatePassword(password);
-    if (!pwCheck.valid) {
-      return res.status(400).json({ message: pwCheck.message });
-    }
+    const { email, password } = parsed.data;
 
     const emailLower = email.toLowerCase();
 
@@ -1570,10 +1570,14 @@ async function startServer() {
 
   // 6. Auth: Login
   app.post("/api/auth/login", authLimiter, async (req, res) => {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ message: "E-mail e senha são obrigatórios!" });
+    const parsed = loginSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Dados inválidos.",
+        errors: parsed.error.issues.map((i) => ({ field: i.path.join("."), message: i.message })),
+      });
     }
+    const { email, password } = parsed.data;
 
     const account = await findAccountByEmail(email);
 
@@ -1590,6 +1594,8 @@ async function startServer() {
     const chars = await findPlayersByAccount(account.id);
 
     res.cookie("chapadonia_token", token, { httpOnly: false, maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "lax" });
+
+    hooks.fire("auth:login", { accountId: account.id, email: account.email });
 
     res.json({
       token,
@@ -1664,6 +1670,7 @@ async function startServer() {
     if (!playerId) return res.status(500).json({ message: "Erro ao criar personagem no banco de dados." });
 
     auditLog("CHARACTER CREATED: {} (id:{}) by account {}", nameCheck.sanitized, playerId, req.accId);
+    hooks.fire("player:create", { name: nameCheck.sanitized, playerId, accountId: req.accId, vocation, gender });
     res.status(201).json({ message: "Personagem criado com sucesso!", player: { id: playerId, name: nameCheck.sanitized, vocation, level: 1, gender } });
   });
 
