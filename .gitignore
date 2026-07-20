@@ -1,0 +1,16 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+sprites/
+database.json
+assets/
+inject.js
+server.cjs
+index_built.html
+index_vite_entry.html
+metadata.json

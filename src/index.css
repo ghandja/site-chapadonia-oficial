@@ -1,0 +1,346 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Space Grotesk", system-ui, -apple-system, sans-serif;
+  --font-medieval: "Space Grotesk", system-ui, -apple-system, sans-serif;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  
+  --color-tibia-brown: #2563eb;
+  --color-tibia-dark: #090d16;
+  --color-tibia-gold: #38bdf8;
+  --color-tibia-parchment: #1e40af;
+}
+
+/* Custom scrollbars for a premium, sleek gaming platform */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.3);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.3);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.6);
+}
+
+/* ==========================================================
+   CHAPADONIA DEEP SPACE GLASSMORPHIC THEME OVERRIDES
+   ========================================================== */
+
+/* 1. Deep Backgrounds of Panels/Sidebars -> Elegant Translucent Glass with Neon Accents */
+.bg-\[\#18110b\] {
+  background-color: rgba(13, 20, 38, 0.35) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 16px !important;
+}
+
+.bg-\[\#0e0905\] {
+  background-color: rgba(9, 15, 29, 0.4) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.04) !important;
+  border-radius: 12px !important;
+}
+
+.bg-\[\#241a10\], .bg-\[\#1e150d\] {
+  background-color: rgba(59, 130, 246, 0.08) !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(255, 255, 255, 0.03) !important;
+}
+
+.bg-\[\#2d2115\], .bg-\[\#1f130b\] {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(59, 130, 246, 0.15) !important;
+}
+
+.bg-\[\#3e2610\] {
+  background-color: rgba(99, 102, 241, 0.15) !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(99, 102, 241, 0.2) !important;
+}
+
+.bg-\[\#110c07\] {
+  background-color: rgba(15, 23, 42, 0.5) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 99px !important;
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.1) !important;
+}
+
+.bg-\[\#120a05\] {
+  background-color: rgba(15, 23, 42, 0.7) !important;
+  backdrop-filter: blur(12px) !important;
+  border-radius: 12px 12px 0 0 !important;
+}
+
+/* 2. Main Parchment and Internal Scrolls -> Beautiful Frosted Glass Sheets */
+.bg-\[\#ebd9b4\] {
+  background-color: rgba(10, 20, 38, 0.35) !important;
+  color: #f1f5f9 !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), inset 0 1px 2px rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 24px !important;
+}
+
+.bg-\[\#faf1e1\] {
+  background-color: rgba(30, 41, 59, 0.2) !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-radius: 16px !important;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.02) !important;
+}
+
+.bg-\[\#f3e4c8\] {
+  background-color: rgba(59, 130, 246, 0.06) !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(255, 255, 255, 0.03) !important;
+  border-radius: 12px !important;
+}
+
+.bg-\[\#dfceab\] {
+  background-color: rgba(37, 99, 235, 0.18) !important;
+  color: #f8fafc !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+/* 3. Global Color Remappings to Premium High-Contrast White, Blue, and Cyan */
+.text-black {
+  color: #ffffff !important;
+}
+
+.text-emerald-500 {
+  color: #38bdf8 !important; /* Soft sky cyan */
+}
+
+/* Interactive Inputs & Selects styled like modern high-tech fields */
+input[type="number"], input[type="text"], input[type="email"], input[type="password"], select {
+  color: #ffffff !important;
+  background-color: rgba(15, 23, 42, 0.5) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  transition: all 0.2s ease-in-out !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+input[type="number"]:focus, input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, select:focus {
+  border-color: rgba(59, 130, 246, 0.6) !important;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.25), inset 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+  outline: none !important;
+}
+
+.bg-gradient-to-b.text-black, .bg-\[\#cfa152\].text-black, .bg-amber-500.text-black {
+  color: #ffffff !important;
+}
+
+.text-black.shrink-0 {
+  color: #ffffff !important;
+}
+
+pre.text-amber-200 {
+  color: #e2e8f0 !important;
+  background-color: rgba(15, 23, 42, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-radius: 8px !important;
+}
+
+/* Remove or Soften Old Gold Titles to Elegant Silver-White and Glowing Cyan */
+.text-\[\#3e2610\] {
+  color: #ffffff !important;
+}
+.text-\[\#795221\] {
+  color: #38bdf8 !important; /* Beautiful glowing cyan accents */
+}
+.text-\[\#5c401b\] {
+  color: #94a3b8 !important; /* Cool neutral slate description text */
+}
+.text-\[\#3c2d1d\] {
+  color: #ffffff !important;
+}
+.text-\[\#4c2a04\] {
+  color: #ffffff !important;
+}
+.text-\[\#8c672b\] {
+  color: #38bdf8 !important;
+}
+.text-\[\#3c2005\] {
+  color: #ffffff !important;
+}
+.text-\[\#7e6037\] {
+  color: #cbd5e1 !important;
+}
+.text-\[\#a39075\] {
+  color: #94a3b8 !important;
+}
+.text-\[\#ebd9b4\] {
+  color: #ffffff !important;
+}
+.text-amber-700 {
+  color: #60a5fa !important; /* Pastel active blue */
+}
+.text-amber-200 {
+  color: #cbd5e1 !important;
+}
+.text-amber-100 {
+  color: #94a3b8 !important;
+}
+
+/* 4. Complete Border Remappings (Goodbye Muddy Browns, Welcome Sleek Silvers & Blues) */
+.border-\[\#5d3f1a\] {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+.border-\[\#312213\] {
+  border-color: rgba(255, 255, 255, 0.05) !important;
+}
+.border-\[\#46311b\] {
+  border-color: rgba(255, 255, 255, 0.05) !important;
+}
+.border-\[\#4a341b\] {
+  border-color: rgba(255, 255, 255, 0.05) !important;
+}
+.border-\[\#3a2713\] {
+  border-color: rgba(255, 255, 255, 0.05) !important;
+}
+.border-\[\#795221\], .border-\[\#442c13\] {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+.border-\[\#d2bc9c\] {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+.border-\[\#e4d3b6\] {
+  border-color: rgba(255, 255, 255, 0.05) !important;
+}
+.border-\[\#bfa275\] {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+.border-\[\#cba668\]\/30 {
+  border-color: rgba(255, 255, 255, 0.05) !important;
+}
+.border-\[\#cfa152\] {
+  border-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+/* 5. Sleek Gradient Remappings (Bypassing compiler quirks with direct linear-gradients) */
+.bg-gradient-to-r.from-\[\#3e2610\] {
+  background-image: linear-gradient(90deg, rgba(59, 130, 246, 0.15) 0%, rgba(30, 58, 138, 0.05) 100%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+.from-\[\#3e2610\] {
+  background-image: linear-gradient(90deg, rgba(59, 130, 246, 0.15) 0%, rgba(30, 58, 138, 0.05) 100%) !important;
+}
+
+/* Webshop Promo Box Gradient -> Stunning Cyber Dark Blue Box */
+.bg-gradient-to-b.from-\[\#795221\] {
+  background-image: linear-gradient(180deg, rgba(30, 58, 138, 0.25) 0%, rgba(15, 23, 42, 0.3) 100%) !important;
+  border: 1px solid rgba(59, 130, 246, 0.2) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.05) !important;
+}
+.from-\[\#795221\] {
+  background-image: linear-gradient(180deg, rgba(30, 58, 138, 0.25) 0%, rgba(15, 23, 42, 0.3) 100%) !important;
+}
+
+/* Pix Quick Buy Panel Gradient -> Deep Slate Cyber Panel */
+.to-\[\#201308\] {
+  --tw-gradient-to: rgba(15, 23, 42, 0.4) !important;
+}
+
+/* Action Buttons (Remap Retro Gold Gradients to High-Performance Glowing Blue) */
+.bg-gradient-to-b.from-\[\#eacf9c\] {
+  background-image: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%) !important;
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.35) !important;
+  border-radius: 8px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.from-\[\#eacf9c\] {
+  background-image: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.35) !important;
+  border-radius: 8px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.bg-gradient-to-b.from-\[\#eacf9c\]:hover, .from-\[\#eacf9c\]:hover {
+  background-image: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%) !important;
+  box-shadow: 0 4px 22px rgba(59, 130, 246, 0.5) !important;
+  transform: translateY(-1px) !important;
+}
+.bg-gradient-to-b.from-\[\#eacf9c\]:active, .from-\[\#eacf9c\]:active {
+  transform: translateY(1px) !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35) !important;
+}
+
+/* Promo Button "Obter Coins Chapadonia" -> Futuristic Silver Accent */
+.bg-\[\#f1e0c5\] {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  color: #030712 !important;
+  border-radius: 8px !important;
+  transition: all 0.2s ease-in-out !important;
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1) !important;
+}
+.bg-\[\#f1e0c5\]:hover {
+  background-color: #ffffff !important;
+  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.3) !important;
+  transform: translateY(-1px) !important;
+}
+.bg-\[\#f1e0c5\].text-black {
+  color: #030712 !important;
+}
+
+/* Promo Banner / Ribbon */
+.bg-amber-500 {
+  background-color: #38bdf8 !important; /* High-contrast bright sky-blue banner */
+}
+.bg-amber-500.text-black {
+  color: #030712 !important;
+}
+
+/* 6. Highscores & Hover Overrides */
+.hover\:bg-\[\#f6eedf\]:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+.divide-\[\#ebd9be\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(255, 255, 255, 0.05) !important;
+}
+.accent-\[\#795221\] {
+  accent-color: #3b82f6 !important;
+}
+
+/* Item Buy Buttons hover */
+.hover\:bg-\[\#5a3b1a\]:hover {
+  background-color: #2563eb !important;
+}
+
+/* Navigation Left Menu Button Hover Styling & Left Active Indicator */
+.group.hover\:bg-\[\#20160e\]:hover {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+.group.bg-\[\#3e2610\]\/60 {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+  border-left-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+.group.text-\[\#eadac2\] {
+  color: #cbd5e1 !important;
+}
+
+/* Character Bazar card inner layout modifications */
+.text-\[\#ebd9b4\] {
+  color: #ffffff !important;
+}
+.border-\[\#ebd9be\] {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
