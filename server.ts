@@ -1593,7 +1593,7 @@ async function startServer() {
     const token = generateToken(account.id);
     const chars = await findPlayersByAccount(account.id);
 
-    res.cookie("chapadonia_token", token, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "lax" });
+    res.cookie("chapadonia_token", token, { httpOnly: false, maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "lax" });
 
     res.json({
       token,
