@@ -78,7 +78,17 @@ async function verifyPassword(inputPlain: string, storedHash: string): Promise<b
   return false;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString("hex");
+let JWT_SECRET = process.env.JWT_SECRET || "";
+if (!JWT_SECRET) {
+  // Persist generated secret using project root (process.cwd() = www/)
+  const secretFile = path.join(process.cwd(), ".jwt_secret");
+  if (fs.existsSync(secretFile)) {
+    JWT_SECRET = fs.readFileSync(secretFile, "utf-8").trim();
+  } else {
+    JWT_SECRET = crypto.randomBytes(32).toString("hex");
+    try { fs.writeFileSync(secretFile, JWT_SECRET, "utf-8"); } catch (e) { console.error("Could not persist JWT secret:", e); }
+  }
+}
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "ghandja1@gmail.com").toLowerCase();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "waenbxe2";
 
@@ -994,6 +1004,7 @@ async function startServer() {
     allowedHeaders: ["Content-Type", "Authorization"],
     maxAge: 86400,
   }));
+  app.set("trust proxy", true);
   app.use(compression());
   app.use(cookieParser());
 
@@ -1601,20 +1612,11 @@ async function startServer() {
   app.get("/api/auth/me", async (req, res) => {
     let token = req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.substring(7) : undefined;
     if (!token && req.cookies?.chapadonia_token) token = req.cookies.chapadonia_token;
-    if (!token) {
-      return res.json({ account: null, characters: [] });
-    }
+    if (!token) return res.json({ account: null, characters: [] });
     const accId = verifyToken(token);
-
-    if (!accId) {
-      return res.json({ account: null, characters: [] });
-    }
-
+    if (!accId) return res.json({ account: null, characters: [] });
     const account = await findAccountByIdMySQL(accId);
-    if (!account) {
-      return res.json({ account: null, characters: [] });
-    }
-
+    if (!account) return res.json({ account: null, characters: [] });
     const chars = await findPlayersByAccount(account.id);
     res.json({
       account: {

@@ -6,6 +6,7 @@ coverage/
 *.log
 .env*
 !.env.example
+.jwt_secret
 sprites/
 database.json
 assets/
