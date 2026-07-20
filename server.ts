@@ -1081,8 +1081,16 @@ async function startServer() {
   }
 
   // CSRF protection middleware (double-submit cookie pattern)
+  // Ensures every visitor has a csrf_token cookie; bypasses auth routes (protected by SameSite=Strict + rate limit)
   function csrfProtection(req: any, res: any, next: any) {
+    // Ensure csrf_token cookie exists for every visitor
+    if (!req.cookies?.csrf_token) {
+      const csrfToken = crypto.randomBytes(32).toString("hex");
+      res.cookie("csrf_token", csrfToken, { httpOnly: false, secure: process.env.NODE_ENV === "production", maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "strict" });
+    }
     if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
+    // Bypass auth routes (login/register) — protected by rate limiter + SameSite=Strict
+    if (req.path.startsWith("/api/auth/")) return next();
     const headerToken = req.headers["x-csrf-token"];
     const cookieToken = req.cookies?.csrf_token;
     if (!headerToken || !cookieToken || headerToken !== cookieToken) {
