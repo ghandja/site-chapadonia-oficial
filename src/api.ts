@@ -16,6 +16,11 @@ export function triggerGlobalError(message: string, status?: number) {
   window.dispatchEvent(new CustomEvent("chapadonia_api_error", { detail: { message, status } }));
 }
 
+function getCsrfToken(): string {
+  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : "";
+}
+
 async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers || {});
   if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
@@ -23,6 +28,12 @@ async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
   }
 
   // Cookie-based auth (httpOnly) handles authentication automatically
+  // CSRF token on mutating requests
+  const method = (options.method || "GET").toUpperCase();
+  if (method !== "GET" && method !== "HEAD") {
+    const csrfToken = getCsrfToken();
+    if (csrfToken) headers.set("X-CSRF-Token", csrfToken);
+  }
 
   const mergedOptions: RequestInit = {
     ...options,

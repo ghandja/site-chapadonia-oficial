@@ -997,8 +997,10 @@ async function startServer() {
   app.use(compression());
   app.use(cookieParser());
 
-  // Request logging (security audit trail)
-  app.use(morgan(":method :url :status :res[content-length] - :response-time ms - :remote-addr"));
+  // Request logging (security audit trail) — no IP logging in production
+  if (process.env.NODE_ENV !== "production") {
+    app.use(morgan(":method :url :status :res[content-length] - :response-time ms - :remote-addr"));
+  }
 
   // Global API rate limiter (fallback for all /api routes)
   const globalApiLimiter = rateLimit({
@@ -1020,8 +1022,11 @@ async function startServer() {
 
   function validatePassword(password: string): { valid: boolean; message?: string } {
     if (typeof password !== "string") return { valid: false, message: "Senha inválida." };
-    if (password.length < 6) return { valid: false, message: "A senha deve ter no mínimo 6 caracteres." };
+    if (password.length < 8) return { valid: false, message: "A senha deve ter no mínimo 8 caracteres." };
     if (password.length > 128) return { valid: false, message: "A senha deve ter no máximo 128 caracteres." };
+    if (!/[A-Z]/.test(password)) return { valid: false, message: "A senha deve conter pelo menos uma letra maiúscula." };
+    if (!/[a-z]/.test(password)) return { valid: false, message: "A senha deve conter pelo menos uma letra minúscula." };
+    if (!/[0-9]/.test(password)) return { valid: false, message: "A senha deve conter pelo menos um número." };
     return { valid: true };
   }
 
@@ -1074,6 +1079,18 @@ async function startServer() {
     req.accId = accId;
     next();
   }
+
+  // CSRF protection middleware (double-submit cookie pattern)
+  function csrfProtection(req: any, res: any, next: any) {
+    if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
+    const headerToken = req.headers["x-csrf-token"];
+    const cookieToken = req.cookies?.csrf_token;
+    if (!headerToken || !cookieToken || headerToken !== cookieToken) {
+      return res.status(403).json({ message: "CSRF token inválido. Recarregue a página e tente novamente." });
+    }
+    next();
+  }
+  app.use("/api", csrfProtection);
 
   // Rate limiter for login/register
   const authLimiter = rateLimit({
@@ -1572,7 +1589,9 @@ async function startServer() {
     const token = generateToken(account.id);
     const chars = await findPlayersByAccount(account.id);
 
-    res.cookie("chapadonia_token", token, { httpOnly: true, secure: process.env.NODE_ENV === "production", maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "lax" });
+    const csrfToken = crypto.randomBytes(32).toString("hex");
+    res.cookie("chapadonia_token", token, { httpOnly: true, secure: process.env.NODE_ENV === "production", maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "strict" });
+    res.cookie("csrf_token", csrfToken, { httpOnly: false, secure: process.env.NODE_ENV === "production", maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "strict" });
 
     res.json({
       token,

@@ -31,6 +31,7 @@ import {
 } from "./types";
 import { getVocationName } from "./utils";
 import { api } from "./api";
+import { useAuth } from "./contexts/AuthContext";
 
 
 export default function App() {
@@ -55,11 +56,10 @@ export default function App() {
     serverVipBonus: 15,
   });
 
+  const { userAccount, coins, myCharacters, isAuthenticated, fetchAuthMe, setUserAccount, setMyCharacters, setCoins } = useAuth();
+
   // Modo Ativo: "site" ou "admin"
   const [viewMode, setViewMode] = useState<"site" | "admin">("site");
-  
-  // Estado do Jogador Simulado (Session)
-  const [userAccount, setUserAccount] = useState<any | null>(null);
 
   useEffect(() => {
     if (viewMode === "admin" && !(userAccount && userAccount.email === "ghandja1@gmail.com")) {
@@ -70,7 +70,6 @@ export default function App() {
   const currentSitePage = location.pathname === "/" || location.pathname === "" ? "news" : location.pathname.slice(1);
   const setCurrentSitePage = (page: string) => navigate("/" + page);
 
-  const [coins, setCoins] = useState<number>(0);
   const [toast, setToast] = useState<{message: string; type: "success" | "error" | "info"} | null>(null);
 
   // Estados das APIs do Servidor Real (Chapadonia OT 15.25)
@@ -93,9 +92,6 @@ export default function App() {
   // Guilds State
   const [guildsList, setGuildsList] = useState<Guild[]>([]);
   const [guildsLoading, setGuildsLoading] = useState(false);
-
-  // Personagens do Jogador
-  const [myCharacters, setMyCharacters] = useState<PlayerCharacter[]>([]);
 
   // Lista do Bazaar (Venda/Troca de Personagens)
   const [bazaarListings, setBazaarListings] = useState<BazaarCharacter[]>([]);
@@ -539,37 +535,6 @@ export default function App() {
       showNotification("Personagem não encontrado ou erro de conexão!", "error");
     } finally {
       setSearchPlayerLoading(false);
-    }
-  };
-
-  // 5. Fetch Account Profile (Me)
-  const fetchAuthMe = async () => {
-    try {
-      const res = await fetch("/api/auth/me", {
-        credentials: "include"
-      });
-      if (res.status === 401 || res.status === 403) {
-        setUserAccount(null);
-        setMyCharacters([]);
-      } else if (res.ok) {
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          const data = await res.json();
-          setUserAccount(data.account);
-          const mappedMyChars = (data.characters || []).map((c: any) => ({
-            name: c.name,
-            vocation: getVocationName(c.vocation),
-            level: c.level,
-            gender: (c.sex === 1 ? "Masculino" : "Feminino") as any,
-            skills: { main: 50, shield: 50 },
-            online: false,
-            premium: true
-          }));
-          setMyCharacters(mappedMyChars);
-        }
-      }
-    } catch (e) {
-      console.error("Erro no carregamento automático de sessão:", e);
     }
   };
 
