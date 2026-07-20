@@ -2461,7 +2461,11 @@ async function startServer() {
   }
 
   app.listen(PORT, "127.0.0.1", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`\n========================================`);
+    console.log(`  Chapadonia Site v2.0 (build ${new Date().toISOString().slice(0,10)})`);
+    console.log(`  Running on http://localhost:${PORT}`);
+    console.log(`  JWT_SECRET: ${JWT_SECRET.slice(0,8)}...`);
+    console.log(`========================================\n`);
   });
 }
 
