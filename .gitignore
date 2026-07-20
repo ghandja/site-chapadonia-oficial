@@ -9,7 +9,9 @@ coverage/
 .jwt_secret
 sprites/
 database.json
-assets/
+assets/index-*.js
+assets/index-*.css
+assets/inject.js
 inject.js
 server.cjs
 index_built.html
