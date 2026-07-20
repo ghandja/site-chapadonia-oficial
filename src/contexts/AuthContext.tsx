@@ -37,24 +37,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchAuthMe = useCallback(async () => {
     try {
       const res = await fetch("/api/auth/me", { credentials: "include" });
-      if (res.status === 401 || res.status === 403) {
-        setUserAccount(null);
-        setMyCharacters([]);
-      } else if (res.ok) {
+      if (res.ok) {
         const contentType = res.headers.get("content-type");
         if (contentType && contentType.includes("application/json")) {
           const data = await res.json();
-          setUserAccount(data.account);
-          const mapped = (data.characters || []).map((c: any) => ({
-            name: c.name,
-            vocation: getVocationName(c.vocation),
-            level: c.level,
-            gender: (c.sex === 1 ? "Masculino" : "Feminino") as any,
-            skills: { main: 50, shield: 50 },
-            online: false,
-            premium: true,
-          }));
-          setMyCharacters(mapped);
+          if (data.account) {
+            setUserAccount(data.account);
+            const mapped = (data.characters || []).map((c: any) => ({
+              name: c.name,
+              vocation: getVocationName(c.vocation),
+              level: c.level,
+              gender: (c.sex === 1 ? "Masculino" : "Feminino") as any,
+              skills: { main: 50, shield: 50 },
+              online: false,
+              premium: true,
+            }));
+            setMyCharacters(mapped);
+          } else {
+            setUserAccount(null);
+            setMyCharacters([]);
+          }
         }
       }
     } catch (e) {

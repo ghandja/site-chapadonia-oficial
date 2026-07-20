@@ -1597,21 +1597,22 @@ async function startServer() {
   });
 
   // 7. Auth: Me Profile
+  // Returns 200 always (null account when not authenticated) — avoids 401 noise in console
   app.get("/api/auth/me", async (req, res) => {
     let token = req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.substring(7) : undefined;
     if (!token && req.cookies?.chapadonia_token) token = req.cookies.chapadonia_token;
     if (!token) {
-      return res.status(401).json({ message: "Não autorizado" });
+      return res.json({ account: null, characters: [] });
     }
     const accId = verifyToken(token);
 
     if (!accId) {
-      return res.status(401).json({ message: "Sessão expirada ou inválida." });
+      return res.json({ account: null, characters: [] });
     }
 
     const account = await findAccountByIdMySQL(accId);
     if (!account) {
-      return res.status(401).json({ message: "Sessão expirada ou inválida." });
+      return res.json({ account: null, characters: [] });
     }
 
     const chars = await findPlayersByAccount(account.id);
