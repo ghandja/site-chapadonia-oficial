@@ -1,4 +1,5 @@
 {
+  "exclude": ["myaac_temp", "dist", "assets", "sprites", "node_modules"],
   "compilerOptions": {
     "target": "ES2022",
     "experimentalDecorators": true,

@@ -15,6 +15,13 @@ import morgan from "morgan";
 import argon2 from "argon2";
 import cookieParser from "cookie-parser";
 
+import { logger, createAuditLog } from "./src/lib/logger";
+import { spriteCache } from "./src/lib/cache";
+import { csrfMiddleware } from "./src/lib/csrf";
+import { runMigrations } from "./src/lib/migrations";
+import { hooks } from "./src/lib/hooks";
+import { loginSchema, registerSchema, createCharacterSchema, houseBidSchema, adminConfigSchema } from "./src/lib/validate";
+
 declare global {
   namespace Express {
     interface Request {
@@ -27,16 +34,12 @@ dotenv.config();
 
 const DB_FILE = path.join(__dirname, "database.json");
 
-function g_logger() {
-  return {
-    info: (message: string, ...args: any[]) => {
-      let formatted = message;
-      for (const arg of args) {
-        formatted = formatted.replace("{}", String(arg));
-      }
-      console.log(`[INFO] [AUDIT] ${formatted}`);
-    }
-  };
+function auditLog(message: string, ...args: any[]) {
+  let formatted = message;
+  for (const arg of args) {
+    formatted = formatted.replace("{}", String(arg));
+  }
+  logger.info({ audit: true }, formatted);
 }
 
 // Crypto and Token helpers
@@ -124,13 +127,13 @@ if (process.env.DB_HOST) {
       connectionLimit: 10,
       queueLimit: 0,
     });
-    console.log("MySQL connection pool created successfully for host:", process.env.DB_HOST);
+    logger.info({ host: process.env.DB_HOST }, "MySQL connection pool created");
   } catch (err) {
-    console.error("Failed to create MySQL pool, falling back to JSON:", err);
+    logger.error({ err }, "Failed to create MySQL pool");
     pool = null;
   }
 } else {
-  console.log("No DB_HOST env variable. MySQL is disabled; falling back to JSON storage.");
+  logger.warn("No DB_HOST env. Falling back to JSON storage.");
 }
 
 // Transaction helper for financial operations
@@ -144,7 +147,7 @@ async function withTransaction<T>(fn: (conn: mysql.PoolConnection) => Promise<T>
     return result;
   } catch (err) {
     await conn.rollback();
-    console.error("Transaction failed, rolled back:", err);
+    logger.error({ err }, "Transaction failed, rolled back");
     throw err;
   } finally {
     conn.release();
@@ -161,7 +164,7 @@ async function findAccountByEmail(email: string) {
         return { id: row.id, email: row.email, password: row.password, coins: row.coins || 0, name: row.name, type: row.type };
       }
     } catch (err) {
-      console.error("MySQL findAccountByEmail error:", err);
+      logger.error({ err }, "MySQL findAccountByEmail");
     }
   }
   // Fallback to JSON
@@ -179,7 +182,7 @@ async function createAccountInMySQL(email: string, passwordHash: string, name: s
       );
       return (result as any).insertId;
     } catch (err) {
-      console.error("MySQL createAccount error:", err);
+      logger.error({ err }, "MySQL createAccount");
     }
   }
   return null;
@@ -609,7 +612,7 @@ async function initializeMySQL() {
   if (!pool) return;
   try {
     const conn = await pool.getConnection();
-    console.log("Successfully connected to MySQL database!");
+    logger.info("Connected to MySQL");
     conn.release();
 
     await pool.query(`
@@ -709,7 +712,7 @@ async function initializeMySQL() {
 
     const [accs] = await pool.query("SELECT COUNT(*) as count FROM accounts");
     if ((accs as any)[0].count === 0) {
-      console.log("Seeding initial accounts table...");
+      logger.info("Seeding initial accounts table...");
       const adminHash = await hashPassword(ADMIN_PASSWORD);
       const now = Math.floor(Date.now() / 1000);
       await pool.query("INSERT INTO accounts (id, name, email, password, type, creation, premdays, lastday, coins) VALUES (999, 'Administrador', ?, ?, 6, ?, 65535, 0, 50000)", [ADMIN_EMAIL, adminHash, now]);
@@ -717,7 +720,7 @@ async function initializeMySQL() {
 
     const [cfg] = await pool.query("SELECT COUNT(*) as count FROM server_config");
     if ((cfg as any)[0].count === 0) {
-      console.log("Seeding initial server_config table...");
+      logger.info("Seeding initial server_config table...");
       await pool.query(`
         INSERT INTO server_config (id, serverName, experienceRate, serverVipBonus, contactEmail, encryptionType, maintenanceMode, eventDoubleXp, eventDoubleSkill, maxPlayers, activeEvents)
         VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -726,9 +729,10 @@ async function initializeMySQL() {
       ]);
     }
 
-    console.log("MySQL initialization completed successfully!");
+    logger.info("MySQL initialization completed");
+    await runMigrations(pool);
   } catch (err: any) {
-    console.log(`[INFO] MySQL not available (${err?.message || err}), falling back to database.json (local JSON storage).`);
+    logger.warn({ err: err?.message || err }, "MySQL not available, falling back to JSON");
     pool = null;
   }
 }
@@ -821,7 +825,7 @@ async function getDBState(): Promise<DBState> {
 
     return { accounts, players, guilds, news, config };
   } catch (err) {
-    console.error("Failed to fetch state from MySQL, falling back to JSON:", err);
+    logger.error({ err }, "Failed to fetch state from MySQL");
     return loadDB();
   }
 }
@@ -949,7 +953,7 @@ async function saveDBState(state: DBState): Promise<void> {
       ]);
     }
   } catch (err) {
-    console.error("Failed to sync state to MySQL, saving local JSON:", err);
+    logger.error({ err }, "Failed to sync state to MySQL");
     saveDB(state);
   }
 }
@@ -1086,10 +1090,7 @@ async function startServer() {
     next();
   }
 
-  // CSRF protection is provided by SameSite=Strict cookie + Authorization header.
-  // External sites cannot read or send the httpOnly cookie (SameSite=Strict),
-  // and cannot set custom headers (Authorization). This combination is sufficient
-  // for CSRF mitigation without requiring additional token exchange.
+  app.use(csrfMiddleware);
 
   // Rate limiter for login/register
   const authLimiter = rateLimit({
@@ -1172,7 +1173,7 @@ async function startServer() {
       return res.status(400).json({ message: "Título, categoria e conteúdo são obrigatórios!" });
     }
     const id = await createNewsMySQL(title, category, content, bullets, author || "Administrador");
-    g_logger().info("ADMIN ACTION: account [{}] created news [{}]", req.accId || 999, title);
+    auditLog("ADMIN ACTION: account [{}] created news [{}]", req.accId || 999, title);
     res.status(201).json({ id, title, category, content, bullets: bullets || [], date: new Date().toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" }), author: author || "Administrador" });
   });
 
@@ -1180,7 +1181,7 @@ async function startServer() {
   app.put("/api/admin/news/:id", requireAdmin, async (req, res) => {
     const id = Number(req.params.id);
     await updateNewsMySQL(id, req.body);
-    g_logger().info("ADMIN ACTION: account [{}] updated news [{}]", req.accId || 999, id);
+    auditLog("ADMIN ACTION: account [{}] updated news [{}]", req.accId || 999, id);
     res.json({ message: "Notícia atualizada!" });
   });
 
@@ -1188,7 +1189,7 @@ async function startServer() {
   app.delete("/api/admin/news/:id", requireAdmin, async (req, res) => {
     const id = Number(req.params.id);
     await deleteNewsMySQL(id);
-    g_logger().info("ADMIN ACTION: account [{}] deleted news [{}]", req.accId || 999, id);
+    auditLog("ADMIN ACTION: account [{}] deleted news [{}]", req.accId || 999, id);
     res.json({ message: "Notícia removida!" });
   });
 
@@ -1213,7 +1214,7 @@ async function startServer() {
     await updatePlayerMySQL(id, updateData);
     if (updateData.accountCoins !== undefined) await setAccountCoinsMySQL(updateData.accountId || 0, Number(updateData.accountCoins));
     if (updateData.accountEmail !== undefined) await setAccountEmailMySQL(updateData.accountId || 0, updateData.accountEmail);
-    g_logger().info("ADMIN ACTION: account [{}] updated player [{}]", req.accId || 999, id);
+    auditLog("ADMIN ACTION: account [{}] updated player [{}]", req.accId || 999, id);
     res.json({ message: "Jogador atualizado com sucesso!" });
   });
 
@@ -1221,7 +1222,7 @@ async function startServer() {
   app.delete("/api/admin/players/:id", requireAdmin, async (req, res) => {
     const id = Number(req.params.id);
     await deletePlayerMySQL(id);
-    g_logger().info("ADMIN ACTION: account [{}] deleted player [{}]", req.accId || 999, id);
+    auditLog("ADMIN ACTION: account [{}] deleted player [{}]", req.accId || 999, id);
     res.json({ message: "Jogador deletado com sucesso!" });
   });
 
@@ -1234,7 +1235,7 @@ async function startServer() {
     }
     await addAccountCoinsMySQL(accountId, Number(amount));
     const coins = await getAccountCoinsMySQL(accountId);
-    g_logger().info("ADMIN ACTION: account [{}] added {} coins to account [{}]", req.accId || 999, amount, accountId);
+    auditLog("ADMIN ACTION: account [{}] added {} coins to account [{}]", req.accId || 999, amount, accountId);
     res.json({ message: "Coins adicionados com sucesso!", coins });
   });
 
@@ -1242,7 +1243,7 @@ async function startServer() {
   app.delete("/api/admin/guilds/:id", requireAdmin, async (req, res) => {
     const id = Number(req.params.id);
     await deleteGuildMySQL(id);
-    g_logger().info("ADMIN ACTION: account [{}] deleted guild [{}]", req.accId || 999, id);
+    auditLog("ADMIN ACTION: account [{}] deleted guild [{}]", req.accId || 999, id);
     res.json({ message: "Guilda dissolvida com sucesso!" });
   });
 
@@ -1251,7 +1252,7 @@ async function startServer() {
     const id = Number(req.params.id);
     const { name, description } = req.body;
     await updateGuildMySQL(id, { name, motd: description });
-    g_logger().info("ADMIN ACTION: account [{}] updated guild [{}]", req.accId || 999, id);
+    auditLog("ADMIN ACTION: account [{}] updated guild [{}]", req.accId || 999, id);
     res.json({ message: "Guilda atualizada com sucesso!" });
   });
 
@@ -1286,7 +1287,7 @@ async function startServer() {
       await setConfigMySQL(key, String(filtered[key]));
     }
     const config = await getConfigMySQL();
-    g_logger().info("ADMIN ACTION: account [{}] updated global config", req.accId || 999);
+    auditLog("ADMIN ACTION: account [{}] updated global config", req.accId || 999);
     res.json({ message: "Configurações globais salvas com sucesso!", config: config || defaultServerConfig });
   });
 
@@ -1662,7 +1663,7 @@ async function startServer() {
     const playerId = await createPlayerInMySQL(nameCheck.sanitized, req.accId!, vocId, sex);
     if (!playerId) return res.status(500).json({ message: "Erro ao criar personagem no banco de dados." });
 
-    g_logger().info("CHARACTER CREATED: {} (id:{}) by account {}", nameCheck.sanitized, playerId, req.accId);
+    auditLog("CHARACTER CREATED: {} (id:{}) by account {}", nameCheck.sanitized, playerId, req.accId);
     res.status(201).json({ message: "Personagem criado com sucesso!", player: { id: playerId, name: nameCheck.sanitized, vocation, level: 1, gender } });
   });
 
@@ -1896,7 +1897,7 @@ async function startServer() {
 
     await updateHouseBidMySQL(houseId, characterName, bidAmount);
 
-    g_logger().info("HOUSES ACTION: account [{}] bid on house {} with heroe {} amount {}", accId, houseId, characterName, bidAmount);
+    auditLog("HOUSES ACTION: account [{}] bid on house {} with heroe {} amount {}", accId, houseId, characterName, bidAmount);
 
     const updatedHouses = await getHousesMySQL();
     const updatedHouse = updatedHouses.find(h => h.id === houseId);
@@ -1993,7 +1994,7 @@ async function startServer() {
       await pool.query("UPDATE players SET account_id = NULL WHERE id = ?", [player.id]);
     }
 
-    g_logger().info("BAZAAR ACTION: account [{}] listed character {} for {} coins", accId, characterName, listPrice);
+    auditLog("BAZAAR ACTION: account [{}] listed character {} for {} coins", accId, characterName, listPrice);
 
     const updatedChars = await findPlayersByAccount(accId);
     const bazaarListings = await getBazaarMySQL();
@@ -2078,7 +2079,7 @@ async function startServer() {
 
     await markBazaarSoldMySQL(listingId);
 
-    g_logger().info("BAZAAR ACTION: account [{}] bought listing {}", accId, listingId);
+    auditLog("BAZAAR ACTION: account [{}] bought listing {}", accId, listingId);
 
     const updatedChars = await findPlayersByAccount(accId);
     const bazaarListings = await getBazaarMySQL();
@@ -2152,7 +2153,7 @@ async function startServer() {
       await pool.query("UPDATE market_items SET characterName = '' WHERE id = ?", [itemId]);
     }
 
-    g_logger().info("MARKET ACTION: account [{}] listed item {} for {} coins", accId, itemId, listPrice);
+    auditLog("MARKET ACTION: account [{}] listed item {} for {} coins", accId, itemId, listPrice);
 
     const updatedMarketItems = await getMarketMySQL();
 
@@ -2243,7 +2244,7 @@ async function startServer() {
 
     const updatedMarketItems = await getMarketMySQL();
 
-    g_logger().info("MARKET ACTION: account [{}] bought item {}", accId, itemId);
+    auditLog("MARKET ACTION: account [{}] bought item {}", accId, itemId);
 
     res.json({
       message: isMyChar 
@@ -2300,19 +2301,6 @@ async function startServer() {
     });
   });
 
-  // Image Proxy for Tibia sprites (bypasses CORS/hotlink restrictions)
-  const imageCache = new Map<string, { data: Buffer; type: string; timestamp: number }>();
-  const CACHE_MAX_AGE = 24 * 60 * 60 * 1000; // 24 hours
-  const CACHE_MAX_SIZE = 500; // max 500 cached sprites
-
-  function cacheSprite(name: string, data: Buffer, type: string) {
-    if (imageCache.size >= CACHE_MAX_SIZE) {
-      const oldest = imageCache.entries().next().value;
-      if (oldest) imageCache.delete(oldest[0]);
-    }
-    imageCache.set(name, { data, type, timestamp: Date.now() });
-  }
-
   // Proxy for Tibia wiki item/monster/outfit sprites
   // Priority: 1) local sprites/ dir  2) CDN  3) SVG placeholder
   app.get("/api/proxy/sprite/:name", proxyLimiter, async (req, res) => {
@@ -2321,9 +2309,8 @@ async function startServer() {
       return res.status(400).send("Invalid filename");
     }
 
-    // Check cache
-    const cached = imageCache.get(name);
-    if (cached && Date.now() - cached.timestamp < CACHE_MAX_AGE) {
+    const cached = spriteCache.get(name);
+    if (cached) {
       res.set("Content-Type", cached.type);
       res.set("Cache-Control", "public, max-age=86400");
       return res.send(cached.data);
@@ -2340,7 +2327,7 @@ async function startServer() {
         const ext = path.extname(name).toLowerCase();
         const mime = ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" : "image/gif";
         const data = fs.readFileSync(lp);
-        cacheSprite(name, data, mime);
+        spriteCache.set(name, { data, type: mime });
         res.set("Content-Type", mime);
         res.set("Cache-Control", "public, max-age=86400");
         return res.send(data);
@@ -2380,7 +2367,7 @@ async function startServer() {
         }
         const altBuffer = Buffer.from(await altResponse.arrayBuffer());
         const altType = altResponse.headers.get("content-type") || "image/gif";
-        cacheSprite(name, altBuffer, altType);
+        spriteCache.set(name, { data: altBuffer, type: altType });
         res.set("Content-Type", altType);
         res.set("Cache-Control", "public, max-age=86400");
         return res.send(altBuffer);
@@ -2388,7 +2375,7 @@ async function startServer() {
 
       const buffer = Buffer.from(await response.arrayBuffer());
       const type = response.headers.get("content-type") || "image/gif";
-      cacheSprite(name, buffer, type);
+      spriteCache.set(name, { data: buffer, type });
       res.set("Content-Type", type);
       res.set("Cache-Control", "public, max-age=86400");
       res.send(buffer);
@@ -2405,7 +2392,7 @@ async function startServer() {
         res.set("Cache-Control", "public, max-age=3600");
         return res.send(Buffer.from(svg));
       }
-      console.error("[Proxy/Sprite] Error fetching", name, e);
+      logger.error({ sprite: name, err: e }, "Sprite proxy fetch error");
       res.status(500).send("Proxy error");
     }
   });
@@ -2428,11 +2415,28 @@ async function startServer() {
 
   // Global error handler (must be last middleware)
   app.use((err: any, req: any, res: any, _next: any) => {
-    console.error(`[ERROR] ${req.method} ${req.url}:`, err.message || err);
-    if (!res.headersSent) {
-      res.status(err.status || 500).json({
-        message: process.env.NODE_ENV === "production" ? "Erro interno do servidor." : err.message,
+    const status = err.status || err.statusCode || 500;
+    const message = status === 500 && process.env.NODE_ENV === "production"
+      ? "Erro interno do servidor."
+      : err.message || "Erro interno do servidor.";
+
+    if (status >= 500) {
+      logger.error({ err, url: req.url, method: req.method }, "Server error");
+    }
+
+    if (err instanceof SyntaxError && "body" in err) {
+      return res.status(400).json({ message: "JSON inválido no corpo da requisição." });
+    }
+
+    if (err.name === "ZodError") {
+      return res.status(400).json({
+        message: "Dados inválidos.",
+        errors: (err as any).issues?.map((i: any) => ({ field: i.path.join("."), message: i.message })),
       });
+    }
+
+    if (!res.headersSent) {
+      res.status(status).json({ message });
     }
   });
 
@@ -2462,11 +2466,7 @@ async function startServer() {
   }
 
   app.listen(PORT, "127.0.0.1", () => {
-    console.log(`\n========================================`);
-    console.log(`  Chapadonia Site v2.0 (build ${new Date().toISOString().slice(0,10)})`);
-    console.log(`  Running on http://localhost:${PORT}`);
-    console.log(`  JWT_SECRET: ${JWT_SECRET.slice(0,8)}...`);
-    console.log(`========================================\n`);
+    logger.info({ port: PORT, build: new Date().toISOString().slice(0,10) }, "Server started");
   });
 }
 
