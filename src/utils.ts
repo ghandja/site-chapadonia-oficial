@@ -21,12 +21,15 @@ export function getVocationName(vocId: number | string | any): string {
 
 export function getOutfitImage(looktype: number): string {
   const lt = looktype || 128;
-  return `/api/proxy/outfit/${lt}`;
+  return `/sprites/Outfit_${lt}.gif`;
 }
 
 export function getSpriteUrl(name: string): string {
-  if (name.startsWith("/api/proxy/") || name.startsWith("http")) {
+  if (name.startsWith("/sprites/") || name.startsWith("http")) {
     return name;
+  }
+  if (name.startsWith("Outfit_")) {
+    return `/sprites/${name}`;
   }
   return `/api/proxy/sprite/${encodeURIComponent(name)}`;
 }

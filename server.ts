@@ -2436,6 +2436,12 @@ async function startServer() {
     }
   });
 
+  // Serve sprites/ directory directly (bypass proxy for outfit images)
+  const projectRoot = process.cwd();
+  if (fs.existsSync(path.join(projectRoot, "sprites"))) {
+    app.use("/sprites", express.static(path.join(projectRoot, "sprites")));
+  }
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
