@@ -36,13 +36,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchAuthMe = useCallback(async () => {
     try {
-      const res = await fetch("/api/auth/me", { credentials: "include" });
+      const token = sessionStorage.getItem("chapadonia_token");
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch("/api/auth/me", { headers, credentials: "include" });
       if (res.ok) {
         const contentType = res.headers.get("content-type");
         if (contentType && contentType.includes("application/json")) {
           const data = await res.json();
           if (data.account) {
             setUserAccount(data.account);
+            // Sync token back to sessionStorage if found via cookie (F5 recovery)
+            if (data.token) sessionStorage.setItem("chapadonia_token", data.token);
             const mapped = (data.characters || []).map((c: any) => ({
               name: c.name,
               vocation: getVocationName(c.vocation),

@@ -1593,7 +1593,7 @@ async function startServer() {
     const token = generateToken(account.id);
     const chars = await findPlayersByAccount(account.id);
 
-    res.cookie("chapadonia_token", token, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "strict" });
+    res.cookie("chapadonia_token", token, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "lax" });
 
     res.json({
       token,
@@ -1618,6 +1618,8 @@ async function startServer() {
     const account = await findAccountByIdMySQL(accId);
     if (!account) return res.json({ account: null, characters: [] });
     const chars = await findPlayersByAccount(account.id);
+    // Generate a fresh token so frontend can store it in sessionStorage for F5 recovery
+    const freshToken = generateToken(accId);
     res.json({
       account: {
         id: account.id,
@@ -1625,7 +1627,8 @@ async function startServer() {
         coins: account.coins,
         name: account.name
       },
-      characters: chars
+      characters: chars,
+      token: freshToken
     });
   });
 

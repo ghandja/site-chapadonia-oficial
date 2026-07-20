@@ -22,7 +22,12 @@ async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
     headers.set("Content-Type", "application/json");
   }
 
-  // Cookie-based auth (httpOnly + SameSite=Strict) handles authentication and CSRF automatically
+  // Use sessionStorage token as primary auth (survives F5), cookie as fallback
+  const token = sessionStorage.getItem("chapadonia_token");
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
   const mergedOptions: RequestInit = {
     ...options,
     headers,
@@ -159,6 +164,9 @@ export const api = {
     return apiFetch<{ token: string; account: AccountInfo["account"]; characters: AccountInfo["characters"] }>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
+    }).then(res => {
+      sessionStorage.setItem("chapadonia_token", res.token);
+      return res;
     });
   },
 
@@ -174,6 +182,7 @@ export const api = {
   },
 
   logout: () => {
+    sessionStorage.removeItem("chapadonia_token");
     window.dispatchEvent(new CustomEvent("chapadonia_unauthorized"));
   },
 
