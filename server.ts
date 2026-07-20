@@ -1582,7 +1582,7 @@ async function startServer() {
     const token = generateToken(account.id);
     const chars = await findPlayersByAccount(account.id);
 
-    res.cookie("chapadonia_token", token, { httpOnly: true, secure: process.env.NODE_ENV === "production", maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "strict" });
+    res.cookie("chapadonia_token", token, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "strict" });
 
     res.json({
       token,
@@ -2437,7 +2437,11 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = __dirname;
+    // Use dist/ when running from project root (e.g., tsx server.ts with NODE_ENV=production)
+    // or directly when running node dist/server.cjs (__dirname is already dist/)
+    const distPath = fs.existsSync(path.join(__dirname, "dist", "index.html"))
+      ? path.join(__dirname, "dist")
+      : __dirname;
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
