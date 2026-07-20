@@ -1611,22 +1611,28 @@ async function startServer() {
   // Returns 200 always (null account when not authenticated) — avoids 401 noise in console
   app.get("/api/auth/me", async (req, res) => {
     let token = req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.substring(7) : undefined;
+    const hasAuthHeader = !!token;
     if (!token && req.cookies?.chapadonia_token) token = req.cookies.chapadonia_token;
-    if (!token) return res.json({ account: null, characters: [] });
+    const hasCookie = !!req.cookies?.chapadonia_token;
+    if (!token) {
+      console.log("[AUTH] No token. header:%s cookie:%s", hasAuthHeader, hasCookie);
+      return res.json({ account: null, characters: [] });
+    }
     const accId = verifyToken(token);
-    if (!accId) return res.json({ account: null, characters: [] });
+    if (!accId) {
+      console.log("[AUTH] Invalid token. header:%s cookie:%s", hasAuthHeader, hasCookie);
+      return res.json({ account: null, characters: [] });
+    }
     const account = await findAccountByIdMySQL(accId);
-    if (!account) return res.json({ account: null, characters: [] });
+    if (!account) {
+      console.log("[AUTH] Account not found for id:", accId);
+      return res.json({ account: null, characters: [] });
+    }
     const chars = await findPlayersByAccount(account.id);
-    // Generate a fresh token so frontend can store it in sessionStorage for F5 recovery
     const freshToken = generateToken(accId);
+    console.log("[AUTH] OK id:%d chars:%d", accId, chars.length);
     res.json({
-      account: {
-        id: account.id,
-        email: account.email,
-        coins: account.coins,
-        name: account.name
-      },
+      account: { id: account.id, email: account.email, coins: account.coins, name: account.name },
       characters: chars,
       token: freshToken
     });
