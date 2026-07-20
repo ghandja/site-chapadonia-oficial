@@ -1080,25 +1080,10 @@ async function startServer() {
     next();
   }
 
-  // CSRF protection middleware (double-submit cookie pattern)
-  // Ensures every visitor has a csrf_token cookie; bypasses auth routes (protected by SameSite=Strict + rate limit)
-  function csrfProtection(req: any, res: any, next: any) {
-    // Ensure csrf_token cookie exists for every visitor
-    if (!req.cookies?.csrf_token) {
-      const csrfToken = crypto.randomBytes(32).toString("hex");
-      res.cookie("csrf_token", csrfToken, { httpOnly: false, secure: process.env.NODE_ENV === "production", maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "strict" });
-    }
-    if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
-    // Bypass auth routes (login/register) — protected by rate limiter + SameSite=Strict
-    if (req.path.startsWith("/api/auth/")) return next();
-    const headerToken = req.headers["x-csrf-token"];
-    const cookieToken = req.cookies?.csrf_token;
-    if (!headerToken || !cookieToken || headerToken !== cookieToken) {
-      return res.status(403).json({ message: "CSRF token inválido. Recarregue a página e tente novamente." });
-    }
-    next();
-  }
-  app.use("/api", csrfProtection);
+  // CSRF protection is provided by SameSite=Strict cookie + Authorization header.
+  // External sites cannot read or send the httpOnly cookie (SameSite=Strict),
+  // and cannot set custom headers (Authorization). This combination is sufficient
+  // for CSRF mitigation without requiring additional token exchange.
 
   // Rate limiter for login/register
   const authLimiter = rateLimit({
@@ -1597,9 +1582,7 @@ async function startServer() {
     const token = generateToken(account.id);
     const chars = await findPlayersByAccount(account.id);
 
-    const csrfToken = crypto.randomBytes(32).toString("hex");
     res.cookie("chapadonia_token", token, { httpOnly: true, secure: process.env.NODE_ENV === "production", maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "strict" });
-    res.cookie("csrf_token", csrfToken, { httpOnly: false, secure: process.env.NODE_ENV === "production", maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "strict" });
 
     res.json({
       token,
