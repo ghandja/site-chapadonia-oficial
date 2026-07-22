@@ -200,12 +200,16 @@ export const CoinsPurchaseModal: React.FC<CoinsPurchaseModalProps> = ({
                 </p>
               </div>
 
-              {/* QR Code Oficial da sua Chave */}
-              <div className="bg-white p-3 rounded-xl max-w-[170px] mx-auto shadow-xl border-4 border-emerald-500/40 text-center">
+              {/* QR Code Oficial da sua Chave PIX */}
+              <div className="bg-white p-3 rounded-xl w-[170px] h-[170px] mx-auto shadow-xl border-4 border-emerald-500/40 text-center flex items-center justify-center">
                 <img 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=Chave%20PIX:%20victorhgos@gmail.com%20-%20Valor:%20R$%20${totalPriceBrl}`} 
+                  src={`https://quickchart.io/qr?text=victorhgos@gmail.com&size=160`} 
                   alt="QR Code PIX victorhgos@gmail.com" 
                   className="w-full h-full object-contain"
+                  onError={(e) => {
+                    // Fallback para API de reserva se houver bloqueio de rede
+                    (e.target as HTMLImageElement).src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=victorhgos@gmail.com`;
+                  }}
                 />
               </div>
 
