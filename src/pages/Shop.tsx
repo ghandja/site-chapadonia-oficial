@@ -120,9 +120,7 @@ export const Shop: React.FC<ShopProps> = ({
   const [modalWorld, setModalWorld] = useState<string>("Chapadonia PvP-Global");
 
   // Local Purchase History
-  const [purchaseHistory, setPurchaseHistory] = useState<Array<{ id: string; itemName: string; price: number; spriteUrl: string; date: string; character: string; world: string }>>([
-    { id: "h1", itemName: "30 Dias Premium Account VIP", price: 250, spriteUrl: "/api/proxy/sprite/Gold_Token.gif", date: "18/07/2026", character: myCharacters[0]?.name || "Chapadonio", world: "Chapadonia PvP-Global" }
-  ]);
+  const [purchaseHistory, setPurchaseHistory] = useState<Array<{ id: string; itemName: string; price: number; spriteUrl: string; date: string; character: string; world: string }>>([]);
 
   // Vocation ID mapping for filter check
   const VOCATION_ID_MAP: Record<string, number> = {
