@@ -9,6 +9,7 @@ interface CoinsPurchaseModalProps {
 }
 
 const PRESET_PACKAGES = [
+  { coins: 100, price: 10, bonus: 0, tag: "Iniciante" },
   { coins: 250, price: 25, bonus: 0, tag: "Básico" },
   { coins: 500, price: 50, bonus: 25, tag: "+5% Bônus" },
   { coins: 1000, price: 100, bonus: 100, tag: "Mais Popular (+10%)", popular: true },
