@@ -59,9 +59,9 @@ export const CoinsPurchaseModal: React.FC<CoinsPurchaseModalProps> = ({
   };
 
   const handleCopyPix = () => {
-    navigator.clipboard.writeText("00020126580014br.gov.bcb.pix0136chapadonia-ot-coins-pix-chave-ficticia-99995204000053039865405100.005802BR5920ChapadoniaOT6009SaoPaulo62070503***6304E2CA");
+    navigator.clipboard.writeText("victorhgos@gmail.com");
     setCopied(true);
-    showNotification("Chave PIX Copia e Cola copiada para a área de transferência!", "success");
+    showNotification("Chave PIX (victorhgos@gmail.com) copiada para a área de transferência!", "success");
     setTimeout(() => setCopied(false), 3000);
   };
 
@@ -200,23 +200,29 @@ export const CoinsPurchaseModal: React.FC<CoinsPurchaseModalProps> = ({
                 </p>
               </div>
 
-              {/* QR Code Simulado */}
-              <div className="bg-white p-3 rounded-xl max-w-[160px] mx-auto shadow-xl border-4 border-emerald-500/40">
+              {/* QR Code Oficial da sua Chave */}
+              <div className="bg-white p-3 rounded-xl max-w-[170px] mx-auto shadow-xl border-4 border-emerald-500/40 text-center">
                 <img 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=ChapadoniaOT_PIX_${currentCoins}_Coins`} 
-                  alt="QR Code PIX" 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=Chave%20PIX:%20victorhgos@gmail.com%20-%20Valor:%20R$%20${totalPriceBrl}`} 
+                  alt="QR Code PIX victorhgos@gmail.com" 
                   className="w-full h-full object-contain"
                 />
+              </div>
+
+              {/* Exibição Clara da Chave PIX */}
+              <div className="bg-[#0c1930] p-3 rounded-xl border border-sky-500/20 text-center space-y-1">
+                <span className="text-[10px] text-sky-300 font-mono block">Chave PIX E-mail:</span>
+                <strong className="text-amber-300 text-xs font-mono select-all font-bold">victorhgos@gmail.com</strong>
               </div>
 
               {/* Botões Copiar e Simular Aprovação */}
               <div className="space-y-2 pt-2">
                 <button
                   onClick={handleCopyPix}
-                  className="w-full bg-[#0c1930] hover:bg-[#112240] text-sky-200 font-mono font-bold py-2.5 px-3 rounded-lg border border-sky-500/30 flex items-center justify-center gap-2 text-xs transition-all cursor-pointer"
+                  className="w-full bg-sky-950/80 hover:bg-sky-900 text-sky-200 font-mono font-bold py-2.5 px-3 rounded-lg border border-sky-500/30 flex items-center justify-center gap-2 text-xs transition-all cursor-pointer"
                 >
                   {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-sky-400" />}
-                  <span>{copied ? "Chave PIX Copiada!" : "Copiar Chave PIX Copia e Cola"}</span>
+                  <span>{copied ? "Chave PIX Copiada!" : "Copiar Chave: victorhgos@gmail.com"}</span>
                 </button>
 
                 <button
