@@ -76,7 +76,26 @@ async function processLooktype(lt, dir) {
   encoder.finish();
 
   await new Promise((res, rej) => {
-    file.on("finish", () => { console.log(`  OK ${lt}: ${frames.length} frames, dir=${foundDir}`); res(); });
+    file.on("finish", () => {
+      // Fix transparency in the generated GIF: mark index 0 as transparent
+      const gif = fs.readFileSync(outPath);
+      let modified = false;
+      for (let i = 0; i < gif.length - 10; i++) {
+        if (gif[i] === 0x21 && gif[i+1] === 0xF9) {
+          // Packed byte at offset 4 from GCE start
+          if (!(gif[i+4] & 0x01)) {
+            const buf = Buffer.from(gif);
+            buf[i+4] |= 0x01; // set transparent color flag
+            buf[i+7] = 0;     // transparent color index = 0
+            fs.writeFileSync(outPath, buf);
+            modified = true;
+          }
+          break; // only first GCE needs fix
+        }
+      }
+      console.log(`  OK ${lt}: ${frames.length} frames${modified ? ' +transparency' : ''}`);
+      res();
+    });
     file.on("error", rej);
   });
 }
