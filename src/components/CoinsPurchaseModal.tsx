@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, Sparkles, Coins, QrCode, Copy, Check, ShieldCheck, Zap } from "lucide-react";
+import { X, Sparkles, Coins, Copy, Check, ShieldCheck, Zap } from "lucide-react";
 
 interface CoinsPurchaseModalProps {
   isOpen: boolean;
@@ -23,35 +23,24 @@ export const CoinsPurchaseModal: React.FC<CoinsPurchaseModalProps> = ({
   onSuccessAddCoins
 }) => {
   const [selectedCoins, setSelectedCoins] = useState<number>(1000);
-  const [customCoins, setCustomCoins] = useState<string>("");
-  const [isCustomMode, setIsCustomMode] = useState<boolean>(false);
   const [pixGenerated, setPixGenerated] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
 
   if (!isOpen) return null;
 
-  // Rate: R$ 1,00 = 10 Coins (R$ 0,10 por Coin)
+  // Rate: R$ 0,10 por Coin
   const COIN_PRICE_BRL = 0.10;
-
-  const currentCoins = isCustomMode ? (parseInt(customCoins) || 0) : selectedCoins;
+  const currentCoins = selectedCoins;
   const totalPriceBrl = (currentCoins * COIN_PRICE_BRL).toFixed(2);
 
   const handleSelectPreset = (coins: number) => {
-    setIsCustomMode(false);
     setSelectedCoins(coins);
-    setPixGenerated(false);
-  };
-
-  const handleCustomChange = (val: string) => {
-    const num = val.replace(/\D/g, "");
-    setCustomCoins(num);
-    setIsCustomMode(true);
     setPixGenerated(false);
   };
 
   const handleGeneratePix = () => {
     if (currentCoins <= 0) {
-      showNotification("Por favor, selecione ou digite uma quantidade de coins válida!", "error");
+      showNotification("Por favor, selecione uma quantidade de coins válida!", "error");
       return;
     }
     setPixGenerated(true);
@@ -97,15 +86,15 @@ export const CoinsPurchaseModal: React.FC<CoinsPurchaseModalProps> = ({
 
         <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
 
-          {/* 1. SELEÇÃO DE PACOTES DE COINS */}
+          {/* 1. SELEÇÃO DE PACOTES DE COINS (APENAS PACOTES FIXOS) */}
           <div className="space-y-3">
             <span className="text-xs font-bold text-sky-300 font-serif uppercase tracking-wider block">
-              1. Selecione o Pacote de Coins
+              Selecione o Pacote de Coins
             </span>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
               {PRESET_PACKAGES.map((pkg) => {
-                const isSelected = !isCustomMode && selectedCoins === pkg.coins;
+                const isSelected = selectedCoins === pkg.coins;
                 return (
                   <button
                     key={pkg.coins}
@@ -141,30 +130,7 @@ export const CoinsPurchaseModal: React.FC<CoinsPurchaseModalProps> = ({
             </div>
           </div>
 
-          {/* 2. QUANTIDADE PERSONALIZADA (VALOR LIVRE) */}
-          <div className="space-y-2 bg-[#080f1e] p-3.5 rounded-xl border border-sky-500/15">
-            <span className="text-xs font-bold text-sky-300 font-serif uppercase tracking-wider block">
-              Ou Digite a Quantidade Desejada (Valor Livre)
-            </span>
-            <div className="flex items-center gap-3">
-              <div className="relative flex-1">
-                <input
-                  type="text"
-                  value={customCoins}
-                  onChange={(e) => handleCustomChange(e.target.value)}
-                  placeholder="Ex: 750 Coins..."
-                  className="w-full bg-[#0c1930] border border-sky-500/30 rounded-lg pl-3 pr-16 py-2 text-xs text-amber-300 font-mono font-bold focus:outline-none focus:border-amber-400 placeholder:text-sky-200/30"
-                />
-                <span className="absolute right-3 top-2 text-xs text-sky-300 font-mono">Coins</span>
-              </div>
-              <div className="text-right text-xs font-mono shrink-0">
-                <span className="text-sky-300 block text-[10px]">Total a Pagar:</span>
-                <strong className="text-emerald-400 text-sm font-extrabold">R$ {totalPriceBrl}</strong>
-              </div>
-            </div>
-          </div>
-
-          {/* 3. RESUMO DA COMPRA & PIX GENERATION */}
+          {/* 2. RESUMO DA COMPRA & PIX GENERATION */}
           {!pixGenerated ? (
             <div className="space-y-4 pt-2">
               <div className="bg-[#0c1930] border border-amber-500/30 p-4 rounded-xl flex items-center justify-between text-xs font-mono">
