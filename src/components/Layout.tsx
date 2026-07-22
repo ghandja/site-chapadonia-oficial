@@ -7,7 +7,7 @@ import {
   Download, BarChart3, Skull, Award
 } from "lucide-react";
 import { ServerStatus } from "./ServerStatus";
-import { AccountInfo, ServerInfo } from "../types";
+import { AccountInfo, ServerInfo, BoostedCreatureInfo, BoostedBossInfo } from "../types";
 import { getVocationName, getOutfitImage } from "../utils";
 import { api } from "../api";
 
@@ -43,7 +43,8 @@ export const Layout: React.FC<LayoutProps> = ({
   const location = useLocation();
   const currentSitePage = location.pathname === "/" || location.pathname === "" ? "news" : location.pathname.slice(1);
   const [localSearchName, setLocalSearchName] = useState("");
-  const [boostedCreature, setBoostedCreature] = useState<{ name: string; looktype: number; type: string; bonusExp: string } | null>(null);
+  const [boostedCreature, setBoostedCreature] = useState<BoostedCreatureInfo | null>(null);
+  const [boostedBoss, setBoostedBoss] = useState<BoostedBossInfo | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -53,15 +54,16 @@ export const Layout: React.FC<LayoutProps> = ({
       })
       .catch((err) => {
         console.error("Layout: falha ao buscar criatura boostada", err);
-        if (active) {
-          setBoostedCreature({
-            name: "Dragon Lord",
-            looktype: 39,
-            type: "Draconiano",
-            bonusExp: "Dobro de Experiência e +50% Gold Drop Rate"
-          });
-        }
       });
+
+    api.getBoostedBoss()
+      .then((data) => {
+        if (active) setBoostedBoss(data);
+      })
+      .catch((err) => {
+        console.error("Layout: falha ao buscar boss boostado", err);
+      });
+
     return () => {
       active = false;
     };
@@ -86,7 +88,6 @@ export const Layout: React.FC<LayoutProps> = ({
     { id: "shop", label: "Loja", desc: "Mercado de Itens & Moedas", page: "shop", icon: ShoppingBag },
     { id: "bazaar", label: "Bazar de Personagens", desc: "Compra e Venda Segura", page: "bazaar", icon: Users },
     { id: "wiki", label: "Wiki do Servidor", desc: "Quests, Hunts & Estágios", page: "wiki", icon: BookOpen },
-    { id: "houses", label: "Casas", desc: "Mapa de Imóveis e Aluguel", page: "houses", icon: Home },
     { id: "staff", label: "Equipe", desc: "Administração do Jogo", page: "staff", icon: UserCheck },
     { id: "bans", label: "Histórico de Bans", desc: "Fictício Informativo", page: "bans", icon: AlertTriangle },
   ];
@@ -292,36 +293,74 @@ export const Layout: React.FC<LayoutProps> = ({
               </button>
             </div>
 
-            {/* Criatura do dia (Boosted Boss / Creature) */}
-            <div className="bg-[#18110b] border-2 border-[#5d3f1a] rounded-xl overflow-hidden shadow-xl">
+            {/* Criatura do dia & Boss do Dia (Boosted Creature & Boss) */}
+            <div className="bg-[#18110b] border-2 border-[#5d3f1a] rounded-xl overflow-hidden shadow-xl space-y-0">
+              {/* CRIATURA BOOSTADA */}
               <div className="bg-gradient-to-r from-[#3e2610] to-[#25170a] px-4 py-2 border-b border-[#5d3f1a]">
                 <span className="text-xs font-bold text-[#cfa152] font-serif uppercase tracking-widest flex items-center gap-2">
                   <Flame className="w-4 h-4 text-amber-500 animate-pulse" />
-                  BOOSTED CREATURE
+                  CRIATURA BOOSTADA
                 </span>
               </div>
               
-              <div className="p-4 text-center space-y-3 flex flex-col items-center">
+              <div className="p-3 text-center space-y-2 flex flex-col items-center border-b border-[#312213]">
                 {boostedCreature ? (
                   <>
-                    <div className="w-16 h-16 bg-[#080f1e] rounded-xl border border-[#795221]/40 flex items-center justify-center overflow-hidden shadow-inner relative shrink-0">
+                    <div className="w-16 h-16 bg-[#080f1e] rounded-xl border border-[#795221]/40 flex items-center justify-center overflow-hidden shadow-inner relative shrink-0 p-1">
                       <img 
-                        src={`https://tibia.fandom.com/wiki/Special:FilePath/${boostedCreature.name.replace(/\s+/g, "_")}.gif`} 
+                        src={boostedCreature.looktype > 0 && boostedCreature.looktype <= 1875 ? `/sprites/Outfit_${boostedCreature.looktype}.gif` : `https://tibia.fandom.com/wiki/Special:FilePath/${encodeURIComponent(boostedCreature.name.replace(/\s+/g, "_"))}.gif`} 
                         alt={boostedCreature.name} 
-                        className="w-12 h-12 object-contain" 
+                        className="max-w-full max-h-full object-contain filter drop-shadow-md" 
                         referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = `https://tibia.fandom.com/wiki/Special:FilePath/${encodeURIComponent(boostedCreature.name.replace(/\s+/g, "_"))}.gif`;
+                        }}
                       />
                     </div>
                     <div>
                       <h4 className="text-xs font-extrabold text-[#ebd9b4] font-serif uppercase tracking-wider">{boostedCreature.name}</h4>
+                      <span className="text-[10px] text-amber-400/90 font-mono block mt-0.5 font-semibold">{boostedCreature.bonusExp || "2x Exp, +50% Gold"}</span>
                     </div>
                   </>
                 ) : (
                   <>
-                    <span className="text-4xl block animate-pulse">🐉</span>
-                    <div>
-                      <h4 className="text-xs font-bold text-[#ebd9b4] font-serif uppercase">Carregando...</h4>
+                    <span className="text-3xl block animate-pulse">🐉</span>
+                    <h4 className="text-xs font-bold text-[#ebd9b4] font-serif uppercase">Carregando...</h4>
+                  </>
+                )}
+              </div>
+
+              {/* BOSS BOOSTADO */}
+              <div className="bg-gradient-to-r from-[#3e2610] to-[#25170a] px-4 py-2 border-b border-[#5d3f1a]">
+                <span className="text-xs font-bold text-[#cfa152] font-serif uppercase tracking-widest flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
+                  BOSS BOOSTADO
+                </span>
+              </div>
+              
+              <div className="p-3 text-center space-y-2 flex flex-col items-center">
+                {boostedBoss ? (
+                  <>
+                    <div className="w-16 h-16 bg-[#080f1e] rounded-xl border border-amber-500/40 flex items-center justify-center overflow-hidden shadow-inner relative shrink-0 p-1">
+                      <img 
+                        src={boostedBoss.looktype > 0 && boostedBoss.looktype <= 1875 ? `/sprites/Outfit_${boostedBoss.looktype}.gif` : `https://tibia.fandom.com/wiki/Special:FilePath/${encodeURIComponent(boostedBoss.name.replace(/\s+/g, "_"))}.gif`} 
+                        alt={boostedBoss.name} 
+                        className="max-w-full max-h-full object-contain filter drop-shadow-md" 
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = `https://tibia.fandom.com/wiki/Special:FilePath/${encodeURIComponent(boostedBoss.name.replace(/\s+/g, "_"))}.gif`;
+                        }}
+                      />
                     </div>
+                    <div>
+                      <h4 className="text-xs font-extrabold text-[#ebd9b4] font-serif uppercase tracking-wider">{boostedBoss.name}</h4>
+                      <span className="text-[10px] text-amber-300/90 font-mono block mt-0.5 font-semibold">{boostedBoss.bonusLoot || "+250% Loot & 3x Bosstiary"}</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-3xl block animate-pulse">👑</span>
+                    <h4 className="text-xs font-bold text-[#ebd9b4] font-serif uppercase">Carregando...</h4>
                   </>
                 )}
               </div>

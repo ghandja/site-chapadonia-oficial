@@ -6,7 +6,9 @@ import {
   AccountInfo,
   NewsItem,
   AdminConfig,
-  Guild
+  Guild,
+  BoostedCreatureInfo,
+  BoostedBossInfo
 } from "./types";
 
 const API_BASE = "";
@@ -99,8 +101,12 @@ export const api = {
     return apiFetch<NewsItem[]>("/api/news");
   },
 
-  getBoostedCreature: (): Promise<{ name: string; looktype: number; type: string; bonusExp: string }> => {
-    return apiFetch<{ name: string; looktype: number; type: string; bonusExp: string }>("/api/server/boosted-creature");
+  getBoostedCreature: (): Promise<BoostedCreatureInfo> => {
+    return apiFetch<BoostedCreatureInfo>("/api/server/boosted-creature");
+  },
+
+  getBoostedBoss: (): Promise<BoostedBossInfo> => {
+    return apiFetch<BoostedBossInfo>("/api/server/boosted-boss");
   },
 
   getServerInfo: (): Promise<ServerInfo> => {

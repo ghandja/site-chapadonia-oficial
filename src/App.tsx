@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { HousesPage } from "./pages/HousesPage";
 import { CoinsPurchaseModal } from "./components/CoinsPurchaseModal";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate, useLocation, Routes, Route } from "react-router-dom";
@@ -20,7 +19,6 @@ import { Shop } from "./pages/Shop";
 import { Bazaar } from "./pages/Bazaar";
 import { Wiki } from "./pages/Wiki";
 import { Admin } from "./pages/Admin";
-import { Houses } from "./pages/Houses";
 import { Staff } from "./pages/Staff";
 import { Bans } from "./pages/Bans";
 import { Downloads } from "./pages/Downloads";
@@ -1000,7 +998,6 @@ export default function App() {
                 <Route path="/shop" element={<Shop coins={coins} myCharacters={myCharacters} stashItems={stashItems} onBuyMarketItem={handleBuyMarketItem} onRemoveItemFromMarket={handleRemoveItemFromMarket} onSimulateSomeoneBuyingMyItem={handleSimulateSomeoneBuyingMyItem} onAnnounceNewItem={handleAnnounceNewItem} userAccount={userAccount} setShowLoginModal={(show) => { if (show) navigate("/login"); }} setShowPixModal={(show) => setCoinsModalOpen(show)} showNotification={showNotification} />} />
                 <Route path="/bazaar" element={<Bazaar bazaarListings={bazaarListings} coins={coins} onBuyCharacter={handleBuyBazaar} userAccount={userAccount} onInspectPlayer={handleInspectPlayerByName} />} />
                 <Route path="/wiki" element={<Wiki experienceRate={config.experienceRate} />} />
-                <Route path="/houses" element={<HousesPage />} />
                 <Route path="/staff" element={<Staff />} />
                 <Route path="/bans" element={<Bans />} />
                 <Route path="/downloads" element={<Downloads />} />

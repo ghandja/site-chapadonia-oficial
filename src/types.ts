@@ -129,6 +129,23 @@ export interface ServerInfo {
   totalPlayers: number;
 }
 
+export interface BoostedCreatureInfo {
+  name: string;
+  looktype: number;
+  raceid: number;
+  type: string;
+  bonusExp: string;
+}
+
+export interface BoostedBossInfo {
+  name: string;
+  looktype: number;
+  looktypeEx: number;
+  raceid: number;
+  type: string;
+  bonusLoot: string;
+}
+
 export interface OnlinePlayer {
   player_id: number;
   name: string;

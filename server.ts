@@ -206,7 +206,7 @@ async function updateAccountPasswordInMySQL(accountId: number, newHash: string) 
 }
 
 // MySQL player helpers
-const PLAYER_SELECT = `id, name, level, vocation, experience, town_id, sex, onlinetime, balance, health, healthmax, mana, manamax, maglevel, skill_sword, skill_axe, skill_club, skill_dist, skill_shielding, skill_fist, skill_fishing, account_id, looktype`;
+const PLAYER_SELECT = `id, name, level, vocation, experience, town_id, sex, onlinetime, balance, health, healthmax, mana, manamax, maglevel, skill_sword, skill_axe, skill_club, skill_dist, skill_shielding, skill_fist, skill_fishing, account_id, looktype, group_id`;
 
 function rowToPlayer(row: any): Player {
   return {
@@ -218,6 +218,7 @@ function rowToPlayer(row: any): Player {
     skill_club: row.skill_club, skill_dist: row.skill_dist, skill_shielding: row.skill_shielding,
     skill_fist: row.skill_fist, skill_fishing: row.skill_fishing,
     account_id: row.account_id, online: false, deaths: [], looktype: row.looktype,
+    group_id: row.group_id || 1,
   };
 }
 
@@ -334,6 +335,31 @@ async function getConfigMySQL(): Promise<any> {
 async function setConfigMySQL(key: string, value: string) {
   if (!pool) return;
   await pool.query("INSERT INTO server_config (config, value) VALUES (?,?) ON DUPLICATE KEY UPDATE value=?", [key, value, value]);
+}
+
+// =========== MySQL: Boosted Creature & Boss ===========
+async function getBoostedCreatureMySQL(): Promise<any> {
+  if (!pool) return null;
+  try {
+    const [rows] = await pool.query("SELECT boostname, looktype, raceid, date FROM boosted_creature LIMIT 1");
+    if ((rows as any[]).length > 0) return (rows as any[])[0];
+    return null;
+  } catch (err) {
+    console.error("MySQL getBoostedCreature error:", err);
+    return null;
+  }
+}
+
+async function getBoostedBossMySQL(): Promise<any> {
+  if (!pool) return null;
+  try {
+    const [rows] = await pool.query("SELECT boostname, looktype, looktypeEx, raceid, date FROM boosted_boss LIMIT 1");
+    if ((rows as any[]).length > 0) return (rows as any[])[0];
+    return null;
+  } catch (err) {
+    console.error("MySQL getBoostedBoss error:", err);
+    return null;
+  }
 }
 
 // =========== MySQL: Bazaar ===========
@@ -479,6 +505,7 @@ interface Player {
   deaths: any[];
   account_id?: number | null;
   looktype?: number;
+  group_id?: number;
 }
 
 interface Account {
@@ -1026,6 +1053,7 @@ async function startServer() {
     message: { message: "Muitas requisições. Aguarde um momento." },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { trustProxy: false },
   });
   app.use("/api", globalApiLimiter);
 
@@ -1097,15 +1125,14 @@ async function startServer() {
     next();
   }
 
-  app.use(csrfMiddleware);
-
-  // Rate limiter for login/register
+   // Rate limiter for login/register
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 10, // 10 attempts per window
     message: { message: "Muitas tentativas de login. Aguarde 15 minutos." },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { trustProxy: false },
   });
 
   const financialLimiter = rateLimit({
@@ -1114,6 +1141,7 @@ async function startServer() {
     message: { message: "Muitas operações financeiras. Aguarde um momento." },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { trustProxy: false },
   });
 
   const adminLimiter = rateLimit({
@@ -1122,6 +1150,7 @@ async function startServer() {
     message: { message: "Muitas operações administrativas. Aguarde um momento." },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { trustProxy: false },
   });
 
   const proxyLimiter = rateLimit({
@@ -1130,6 +1159,7 @@ async function startServer() {
     message: { message: "Muitas requisições ao proxy. Aguarde um momento." },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { trustProxy: false },
   });
 
   // Apply admin rate limiter to all /api/admin routes (must be AFTER adminLimiter declaration)
@@ -1154,16 +1184,47 @@ async function startServer() {
     res.json({ online: names.map(n => ({ name: n, level: 0, vocation: 0 })) });
   });
 
-  // 2.05 Fetch Boosted Creature of the Week
+  // 2.05 Fetch Boosted Creature of the Day — from MySQL
   app.get("/api/server/boosted-creature", async (req, res) => {
-    const config = await getConfigMySQL();
-    const name = (config && config.boostedCreatureName) || "Dragon Lord";
-    const looktype = parseInt((config && config.boostedCreatureLooktype) || "39");
+    const boosted = await getBoostedCreatureMySQL();
+    if (boosted && boosted.boostname && boosted.boostname !== "default") {
+      return res.json({
+        name: boosted.boostname,
+        looktype: boosted.looktype || 136,
+        raceid: boosted.raceid || 0,
+        type: "Criatura Boostada",
+        bonusExp: "Dobro de Exp, +50% Gold & Respawn Acelerado"
+      });
+    }
     res.json({
-      name,
-      looktype,
-      type: "Draconiano",
-      bonusExp: "Dobro de Experiência e +50% Gold Drop Rate"
+      name: "Hideous Fungus",
+      looktype: 499,
+      raceid: 891,
+      type: "Criatura Boostada",
+      bonusExp: "Dobro de Exp, +50% Gold & Respawn Acelerado"
+    });
+  });
+
+  // 2.06 Fetch Boosted Boss of the Day — from MySQL
+  app.get("/api/server/boosted-boss", async (req, res) => {
+    const boosted = await getBoostedBossMySQL();
+    if (boosted && boosted.boostname && boosted.boostname !== "default") {
+      return res.json({
+        name: boosted.boostname,
+        looktype: boosted.looktype || 136,
+        looktypeEx: boosted.looktypeEx || 0,
+        raceid: boosted.raceid || 0,
+        type: "Boss Boostado",
+        bonusLoot: "+250% Bônus de Loot & 3x Bosstiary Kills"
+      });
+    }
+    res.json({
+      name: "Eldritch Dragon Lord",
+      looktype: 1879,
+      looktypeEx: 0,
+      raceid: 2739,
+      type: "Boss Boostado",
+      bonusLoot: "+250% Bônus de Loot & 3x Bosstiary Kills"
     });
   });
 
@@ -1485,7 +1546,20 @@ async function startServer() {
     const { sort = "level", vocation = "0", page = "1", limit = "20" } = req.query;
     
     const allPlayers = await findAllPlayersMySQL();
-    let filtered = allPlayers;
+    let filtered = allPlayers.filter(p => {
+      const nameLower = p.name.toLowerCase();
+      // Exclude sample characters, account_id 0, and staff/gods (group_id > 1)
+      if (
+        nameLower.endsWith("sample") || 
+        nameLower.includes(" sample") || 
+        (p.group_id !== undefined && p.group_id > 1) || 
+        p.account_id === 0
+      ) {
+        return false;
+      }
+      return true;
+    });
+
     const vocId = Number(vocation);
     if (vocId > 0) {
       filtered = filtered.filter(p => {
