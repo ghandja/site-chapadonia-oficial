@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { HousesPage } from "./pages/HousesPage";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate, useLocation, Routes, Route } from "react-router-dom";
 import { Shield } from "lucide-react";
@@ -997,7 +998,7 @@ export default function App() {
                 <Route path="/shop" element={<Shop coins={coins} myCharacters={myCharacters} stashItems={stashItems} onBuyMarketItem={handleBuyMarketItem} onRemoveItemFromMarket={handleRemoveItemFromMarket} onSimulateSomeoneBuyingMyItem={handleSimulateSomeoneBuyingMyItem} onAnnounceNewItem={handleAnnounceNewItem} userAccount={userAccount} setShowLoginModal={(show) => { if (show) navigate("/login"); }} setShowPixModal={() => { showNotification("Formas de doação via Pix podem ser simuladas na sua conta!", "info"); }} showNotification={showNotification} />} />
                 <Route path="/bazaar" element={<Bazaar bazaarListings={bazaarListings} coins={coins} onBuyCharacter={handleBuyBazaar} userAccount={userAccount} onInspectPlayer={handleInspectPlayerByName} />} />
                 <Route path="/wiki" element={<Wiki experienceRate={config.experienceRate} />} />
-                <Route path="/houses" element={<Houses userAccount={userAccount} myCharacters={myCharacters} coins={coins} onBidSuccess={(updatedCoins: number) => { setCoins(updatedCoins); if (userAccount) { setUserAccount({ ...userAccount, coins: updatedCoins }); } }} showNotification={showNotification} />} />
+                <Route path="/houses" element={<HousesPage />} />
                 <Route path="/staff" element={<Staff />} />
                 <Route path="/bans" element={<Bans />} />
                 <Route path="/downloads" element={<Downloads />} />

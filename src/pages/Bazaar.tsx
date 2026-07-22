@@ -143,21 +143,24 @@ export const Bazaar: React.FC<BazaarProps> = ({
                     <div className="space-y-3">
                       {/* Name, Vocation, Price Row */}
                       <div className="flex justify-between items-start border-b border-sky-500/10 pb-2 gap-2">
-                        <div className="flex items-center gap-2 overflow-hidden">
-                          {/* Animated/static outfit preview */}
-                          <img 
-                            src={getOutfitImage(looktype)} 
-                            alt="" 
-                            className="w-28 h-28 object-contain shrink-0" 
-                            referrerPolicy="no-referrer"
-                          />
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          {/* RubinOT / Boosted Creature Style Frame */}
+                          <div className="w-14 h-14 bg-[#080f1e] rounded-xl border border-[#795221]/50 flex items-center justify-center overflow-hidden shadow-inner shrink-0 relative">
+                            <img 
+                              src={getOutfitImage(looktype)} 
+                              alt="" 
+                              className="w-12 h-12 object-contain" 
+                              referrerPolicy="no-referrer"
+                            />
+                          </div>
                           <div className="overflow-hidden">
                             <h4 className="text-sm font-extrabold text-white font-serif truncate" title={char.name}>{char.name}</h4>
-                            <span className="text-[10px] text-sky-300 font-bold font-mono">{char.vocation}</span>
+                            <span className="text-[10px] text-sky-300 font-bold font-mono block">{char.vocation}</span>
                           </div>
                         </div>
-                        <span className="bg-[#080f1e] text-amber-300 text-xs font-mono font-extrabold px-2.5 py-1.5 rounded border border-amber-500/30 shadow-inner shrink-0 text-center">
-                          {char.price} <span className="text-[8px] block text-amber-400/80">Coins</span>
+                        <span className="bg-[#080f1e] text-amber-300 text-xs font-mono font-extrabold px-3 py-1.5 rounded-lg border border-amber-500/30 shadow-inner shrink-0 text-center flex items-center gap-1.5">
+                          <Coins className="w-3.5 h-3.5 text-amber-400" />
+                          <span>{char.price} <span className="text-[9px] text-amber-400/80 font-normal">Coins</span></span>
                         </span>
                       </div>
 
