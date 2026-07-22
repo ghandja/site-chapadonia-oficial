@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { HousesPage } from "./pages/HousesPage";
+import { CoinsPurchaseModal } from "./components/CoinsPurchaseModal";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate, useLocation, Routes, Route } from "react-router-dom";
 import { Shield } from "lucide-react";
@@ -106,7 +107,8 @@ export default function App() {
   // Chaves de Recuperação (Recovery Key) por conta
   const [recoveryKeys, setRecoveryKeys] = useState<Record<string, string>>({});
 
-  // Admin Panel states
+  // Coins Modal State
+  const [coinsModalOpen, setCoinsModalOpen] = useState(false);
   const [newsList, setNewsList] = useState<NewsItem[]>([]);
   const [newsLoading, setNewsLoading] = useState(false);
   const [adminPlayersList, setAdminPlayersList] = useState<any[]>([]);
@@ -995,7 +997,7 @@ export default function App() {
                 <Route path="/account" element={userAccount ? <Account userAccount={userAccount} myCharacters={myCharacters} onLogout={handleLogout} coins={coins} confirmedEmails={confirmedEmails} recoveryKeys={recoveryKeys} sessionGeneratedKeys={sessionGeneratedKeys} stashItems={stashItems} itemSellPrice={itemSellPrice} setItemSellPrice={setItemSellPrice} sellPrice={sellPrice} setSellPrice={setSellPrice} onConfirmEmail={handleConfirmEmail} onGenerateRK={handleGenerateRK} onCreateSecondaryChar={handleCreateSecondaryChar} onListItemOnMarket={handleListItemOnMarket} onRemoveItemFromMarket={handleRemoveItemFromMarket} onListCharacterOnBazaar={handleListCharacterOnBazaar} onGetInitialStashItems={handleGetInitialStashItems} showNotification={showNotification} /> : <Login onLoginSuccess={handleLoginSuccess} showNotification={showNotification} />} />
                 <Route path="/player_info" element={inspectedPlayerDetails ? <PlayerInfo player={inspectedPlayerDetails} onlinePlayersList={onlinePlayersList} onBack={() => navigate("/highscores")} /> : <Home userAccount={userAccount} setCurrentSitePage={setCurrentSitePage} />} />
                 <Route path="/guilds" element={<Guilds guildsList={guildsList} guildsLoading={guildsLoading} userAccount={userAccount} myCharacters={myCharacters} onJoinGuild={handleJoinGuild} onLeaveGuild={handleLeaveGuild} onCreateGuild={handleCreateGuild} showNotification={showNotification} onInspectPlayer={handleInspectPlayerByName} setShowLoginModal={(show) => { if (show) navigate("/login"); }} />} />
-                <Route path="/shop" element={<Shop coins={coins} myCharacters={myCharacters} stashItems={stashItems} onBuyMarketItem={handleBuyMarketItem} onRemoveItemFromMarket={handleRemoveItemFromMarket} onSimulateSomeoneBuyingMyItem={handleSimulateSomeoneBuyingMyItem} onAnnounceNewItem={handleAnnounceNewItem} userAccount={userAccount} setShowLoginModal={(show) => { if (show) navigate("/login"); }} setShowPixModal={() => { showNotification("Formas de doação via Pix podem ser simuladas na sua conta!", "info"); }} showNotification={showNotification} />} />
+                <Route path="/shop" element={<Shop coins={coins} myCharacters={myCharacters} stashItems={stashItems} onBuyMarketItem={handleBuyMarketItem} onRemoveItemFromMarket={handleRemoveItemFromMarket} onSimulateSomeoneBuyingMyItem={handleSimulateSomeoneBuyingMyItem} onAnnounceNewItem={handleAnnounceNewItem} userAccount={userAccount} setShowLoginModal={(show) => { if (show) navigate("/login"); }} setShowPixModal={(show) => setCoinsModalOpen(show)} showNotification={showNotification} />} />
                 <Route path="/bazaar" element={<Bazaar bazaarListings={bazaarListings} coins={coins} onBuyCharacter={handleBuyBazaar} userAccount={userAccount} onInspectPlayer={handleInspectPlayerByName} />} />
                 <Route path="/wiki" element={<Wiki experienceRate={config.experienceRate} />} />
                 <Route path="/houses" element={<HousesPage />} />
@@ -1009,6 +1011,18 @@ export default function App() {
           </motion.div>
         </AnimatePresence>
       </Layout>
+      {/* MODAL SELEÇÃO E COMPRA DE COINS */}
+      <CoinsPurchaseModal 
+        isOpen={coinsModalOpen} 
+        onClose={() => setCoinsModalOpen(false)} 
+        showNotification={showNotification}
+        onSuccessAddCoins={(amount) => {
+          setCoins(coins + amount);
+          if (userAccount) {
+            setUserAccount({ ...userAccount, coins: userAccount.coins + amount });
+          }
+        }}
+      />
     </div>
   );
 }
