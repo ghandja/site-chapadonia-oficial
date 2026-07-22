@@ -194,19 +194,21 @@ export const HousesPage: React.FC = () => {
                     <td className="px-4 py-3 text-center text-sky-200">{h.beds} beds</td>
                     <td className="px-4 py-3 text-center font-bold text-amber-400">{h.rent.toLocaleString()} gp</td>
                     <td className="px-4 py-3 text-center">
-                      {h.status === "rented" && h.ownerName ? (
-                        <span className="text-emerald-300 font-bold bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full text-[10px]">
-                          Alugada por {h.ownerName}
-                        </span>
-                      ) : h.status === "auction" ? (
-                        <span className="text-amber-300 font-bold bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full text-[10px]">
-                          Em Leilão ({h.bid || 10000} gp)
-                        </span>
-                      ) : (
-                        <span className="text-sky-300 font-bold bg-sky-500/15 border border-sky-500/30 px-2 py-0.5 rounded-full text-[10px]">
-                          Livre para !buyhouse
-                        </span>
-                      )}
+                      <div className="flex items-center justify-center">
+                        {h.status === "rented" && h.ownerName ? (
+                          <span className="inline-block w-48 text-center text-emerald-300 font-bold bg-emerald-500/15 border border-emerald-500/30 px-2 py-1 rounded-md text-[10px] truncate">
+                            Alugada por {h.ownerName}
+                          </span>
+                        ) : h.status === "auction" ? (
+                          <span className="inline-block w-48 text-center text-amber-300 font-bold bg-amber-500/15 border border-amber-500/30 px-2 py-1 rounded-md text-[10px] truncate">
+                            Em Leilão ({h.bid || 10000} gp)
+                          </span>
+                        ) : (
+                          <span className="inline-block w-48 text-center text-sky-300 font-bold bg-sky-500/15 border border-sky-500/30 px-2 py-1 rounded-md text-[10px] truncate">
+                            Livre para !buyhouse
+                          </span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
