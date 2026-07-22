@@ -301,28 +301,27 @@ export const Shop: React.FC<ShopProps> = ({
         )}
       </div>
 
-      {/* PIX QUICK BUY BANNER */}
-      <div className="bg-gradient-to-r from-[#112240] to-[#0d1b32] border border-sky-500/30 rounded-xl p-4 text-white shadow-md flex flex-col md:flex-row items-center justify-between gap-4">
+      {/* PIX QUICK BUY & TIBIAITENS P2P BANNER */}
+      <div className="bg-gradient-to-r from-[#0c1930] via-[#112240] to-[#0c1930] border border-sky-500/30 rounded-xl p-5 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-4 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 via-sky-400 to-amber-500" />
+        
         <div className="space-y-1 text-center md:text-left">
-          <span className="text-xs font-bold text-amber-400 uppercase tracking-wider block font-serif">⚡ Doações ⚡</span>
-          <p className="text-[10px] text-sky-200/70 font-mono">
-            Sua recarga é creditada instantaneamente no banco de dados. Teste a loja à vontade!
+          <span className="text-xs font-bold text-amber-400 uppercase tracking-widest block font-serif flex items-center justify-center md:justify-start gap-1.5">
+            <Sparkles className="w-4 h-4 text-amber-300" /> Marketplace TibiaItens — P2P & Loja Oficial
+          </span>
+          <p className="text-xs text-sky-200/90 font-mono max-w-xl">
+            Compre e venda armas, armaduras, montarias e coins diretamente com outros jogadores do servidor ou adquira benefícios VIP na loja oficial!
           </p>
         </div>
-        <button 
-          onClick={() => setShowPixModal(true)}
-          className="bg-gradient-to-b from-[#eacf9c] to-[#cba668] hover:from-[#f6dda6] hover:to-[#dbb576] text-black font-extrabold text-xs px-5 py-2.5 rounded-lg shadow-lg cursor-pointer uppercase tracking-wider transition-all"
-        >
-          Doação via Pix
-        </button>
-      </div>
 
-      {/* INFO ECONOMIA DOS JOGADORES */}
-      <div className="bg-[#0c1930]/60 border border-sky-500/20 rounded-xl p-4 text-xs text-sky-200 flex gap-3 shadow-lg items-center">
-        <Info className="w-5 h-5 text-sky-400 shrink-0" />
-        <p className="leading-relaxed text-sky-200/80">
-          <strong>Mercado dos Jogadores:</strong> A loja é movimentada pelos próprios jogadores! Eles que colocam itens para venda e movimentam toda a economia local de forma segura e autônoma.
-        </p>
+        <div className="flex items-center gap-2 shrink-0">
+          <button 
+            onClick={() => setShowPixModal(true)}
+            className="bg-gradient-to-b from-[#eacf9c] to-[#cba668] hover:from-[#f6dda6] hover:to-[#dbb576] text-black font-extrabold text-xs px-4 py-2.5 rounded-lg shadow-lg cursor-pointer uppercase tracking-wider transition-all border border-[#df9c3c]"
+          >
+            🪙 Adquirir Coins
+          </button>
+        </div>
       </div>
 
       {/* CATEGORIES BUTTONS GRID */}
