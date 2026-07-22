@@ -16,40 +16,32 @@ function readPNG(filepath) {
 }
 
 async function processLooktype(lt, dir) {
-  // Try direction 3 (front) with all animation frames 1-8
-  // Format: {animation}_1_1_3.png
   const frames = [];
-  let width, height, foundDir;
+  let width, height;
 
-  for (const tryDir of [3, 2, 4, 1]) {
+  // Front-facing direction 3 walk frames: 3_1_1_1.png, 3_1_1_2.png, 3_1_1_3.png, 3_1_1_4.png
+  for (let f = 1; f <= 4; f++) {
+    const fp = path.join(dir, "3_1_1_" + f + ".png");
+    if (!fs.existsSync(fp)) break;
+    const png = await readPNG(fp);
+    if (!width) { width = png.width; height = png.height; }
+    frames.push(png.data);
+  }
+
+  // Fallback direction 1 if direction 3 is missing
+  if (frames.length < 2) {
     frames.length = 0;
     width = null;
-    for (let a = 1; a <= 8; a++) {
-      const fp = path.join(dir, `${a}_1_1_${tryDir}.png`);
+    for (let f = 1; f <= 4; f++) {
+      const fp = path.join(dir, "1_1_1_" + f + ".png");
       if (!fs.existsSync(fp)) break;
       const png = await readPNG(fp);
       if (!width) { width = png.width; height = png.height; }
       frames.push(png.data);
     }
-    if (frames.length >= 2) { foundDir = tryDir; break; }
   }
 
-  // Fallback: single frame any direction
-  if (!foundDir) {
-    frames.length = 0;
-    width = null;
-    for (const tryDir of [3, 2, 1, 4]) {
-      const fp = path.join(dir, `1_1_1_${tryDir}.png`);
-      if (fs.existsSync(fp)) {
-        const png = await readPNG(fp);
-        width = png.width; height = png.height;
-        frames.push(png.data);
-        foundDir = tryDir;
-        break;
-      }
-    }
-  }
-
+  // Fallback single frame
   if (frames.length === 0) {
     const anyFile = fs.readdirSync(dir).find(f => f.endsWith(".png") && !f.includes("template"));
     if (anyFile) {
@@ -59,41 +51,24 @@ async function processLooktype(lt, dir) {
     }
   }
 
-  if (frames.length === 0 || !width) {
-    console.log(`  SKIP ${lt}`);
-    return;
-  }
+  if (frames.length === 0 || !width) return;
 
   const encoder = new GIFEncoder(width, height);
-  const outPath = path.join(DEST, `Outfit_${lt}.gif`);
+  const outPath = path.join(DEST, "Outfit_" + lt + ".gif");
   const file = fs.createWriteStream(outPath);
   encoder.createReadStream().pipe(file);
 
   encoder.setRepeat(0);
-  encoder.setDelay(120);
+  encoder.setDelay(180);
   encoder.start();
-  for (const frame of frames) encoder.addFrame(frame);
+
+  for (const frame of frames) {
+    encoder.addFrame(frame);
+  }
   encoder.finish();
 
   await new Promise((res, rej) => {
     file.on("finish", () => {
-      // Fix transparency in the generated GIF: mark index 0 as transparent
-      const gif = fs.readFileSync(outPath);
-      let modified = false;
-      for (let i = 0; i < gif.length - 10; i++) {
-        if (gif[i] === 0x21 && gif[i+1] === 0xF9) {
-          // Packed byte at offset 4 from GCE start
-          if (!(gif[i+4] & 0x01)) {
-            const buf = Buffer.from(gif);
-            buf[i+4] |= 0x01; // set transparent color flag
-            buf[i+7] = 0;     // transparent color index = 0
-            fs.writeFileSync(outPath, buf);
-            modified = true;
-          }
-          break; // only first GCE needs fix
-        }
-      }
-      console.log(`  OK ${lt}: ${frames.length} frames${modified ? ' +transparency' : ''}`);
       res();
     });
     file.on("error", rej);
@@ -102,19 +77,14 @@ async function processLooktype(lt, dir) {
 
 async function main() {
   const dirs = fs.readdirSync(SOURCE, { withFileTypes: true }).filter(d => d.isDirectory());
-  console.log(`Processing ${dirs.length} looktypes...`);
-  let count = 0, animated = 0;
+  console.log("Processing " + dirs.length + " looktypes (Strict Front Walk GIFs)...");
+  let count = 0;
   for (const dir of dirs) {
-    const lt = dir.name;
-    try {
-      const before = fs.existsSync(path.join(DEST, `Outfit_${lt}.gif`)) ? fs.statSync(path.join(DEST, `Outfit_${lt}.gif`)).size : 0;
-      await processLooktype(lt, path.join(SOURCE, lt));
-      count++;
-    } catch (err) {
-      console.error(`  ERROR ${lt}: ${err.message}`);
-    }
+    await processLooktype(dir.name, path.join(SOURCE, dir.name));
+    count++;
   }
-  console.log(`\nDone: ${count}/${dirs.length}`);
+  console.log("\nDone: " + count + "/" + dirs.length);
 }
 
 main().catch(console.error);
+

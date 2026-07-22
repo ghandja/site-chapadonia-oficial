@@ -1022,7 +1022,7 @@ async function startServer() {
   // Global API rate limiter (fallback for all /api routes)
   const globalApiLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 200,
+    max: 1000,
     message: { message: "Muitas requisições. Aguarde um momento." },
     standardHeaders: true,
     legacyHeaders: false,
@@ -2306,6 +2306,18 @@ async function startServer() {
       message: `Retirado! O item '${item.name}' foi removido da venda e voltou para o Depot de '${charNames[0] || "Sir Chapadonia Knight"}'.`,
       marketItems: updatedMarketItems
     });
+  });
+
+  // Serve outfit animation frames directly
+  app.get("/sprites/outfit_frames/:looktype/:frame", (req, res) => {
+    const { looktype, frame } = req.params;
+    const framePath = path.join(process.cwd(), "sprites", "outfit_frames", looktype, frame);
+    if (fs.existsSync(framePath)) {
+      res.set("Content-Type", "image/png");
+      res.set("Cache-Control", "public, max-age=86400");
+      return res.sendFile(framePath);
+    }
+    return res.status(404).send("Frame not found");
   });
 
   // Proxy for Tibia wiki item/monster/outfit sprites

@@ -109,53 +109,68 @@ export const PlayerInfo: React.FC<PlayerInfoProps> = ({
         {activeTab === "info" && (
           <div className="space-y-4">
             
-            {/* OUTFIT GRANDE CENTRALIZADO */}
-            <div className="bg-[#0c1930] border border-sky-500/30 rounded-2xl p-6 flex flex-col items-center justify-center text-center shadow-lg relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-sky-400" />
-                <img 
-                  src={getOutfitImage(player.looktype)} 
-                  alt={player.name} 
-                  className="w-64 h-64 object-contain mb-3" 
-                  referrerPolicy="no-referrer"
-                />
-              <h3 className="text-base font-extrabold text-white font-serif uppercase tracking-wider">{player.name}</h3>
-              <p className="text-[11px] text-sky-300 font-mono mt-0.5">
-                Outfit Clássico — Looktype {player.looktype || 128}
-              </p>
-            </div>
-            
-            <div className="bg-[#0c1930] border border-sky-500/20 p-4 rounded-xl space-y-3">
-              <h3 className="text-xs font-extrabold text-white uppercase tracking-wider block font-serif border-b border-sky-500/10 pb-1.5 flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-sky-400" /> Detalhes Mundiais
-              </h3>
+      {/* RubinOT Style Header Card */}
+      <div className="bg-[#0c1930] border border-sky-500/30 rounded-2xl p-5 md:p-6 shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 via-sky-400 to-amber-500" />
+        
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+          {/* Avatar Box (Estilo RubinOT / Boosted Creature) */}
+          <div className="w-28 h-28 bg-[#080f1e] rounded-xl border border-[#795221]/50 flex items-center justify-center overflow-hidden shadow-inner shrink-0 relative">
+            <img 
+              src={getOutfitImage(player.looktype)} 
+              alt={player.name} 
+              className="w-24 h-24 object-contain" 
+              referrerPolicy="no-referrer"
+            />
+          </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono text-sky-100">
-                <div className="bg-[#080f1e] p-2.5 rounded-lg border border-sky-500/10 flex justify-between">
-                  <span className="text-sky-300">Sexo / Gênero:</span>
-                  <span className="font-bold text-white">{player.sex === 1 ? "Masculino" : "Feminino"}</span>
-                </div>
-                <div className="bg-[#080f1e] p-2.5 rounded-lg border border-sky-500/10 flex justify-between">
-                  <span className="text-sky-300">Cidade Natal:</span>
-                  <span className="font-bold text-white">{player.townName || "Thais"}</span>
-                </div>
-                <div className="bg-[#080f1e] p-2.5 rounded-lg border border-sky-500/10 flex justify-between">
-                  <span className="text-sky-300">Saldo Bancário:</span>
-                  <span className="font-bold text-amber-300">🪙 {player.balance?.toLocaleString() || 0} gp</span>
-                </div>
-                <div className="bg-[#080f1e] p-2.5 rounded-lg border border-sky-500/10 flex justify-between">
-                  <span className="text-sky-300">Tempo Jogado:</span>
-                  <span className="font-bold text-white">{(player.onlinetime / 3600).toFixed(1)} Horas</span>
-                </div>
-                <div className="bg-[#080f1e] p-2.5 rounded-lg border border-sky-500/10 flex justify-between">
-                  <span className="text-sky-300">Experiência Total:</span>
-                  <span className="font-bold text-white">{player.experience?.toLocaleString() || 0} XP</span>
-                </div>
-                <div className="bg-[#080f1e] p-2.5 rounded-lg border border-sky-500/10 flex justify-between">
-                  <span className="text-sky-300">Capacidade (Cap):</span>
-                  <span className="font-bold text-white">{player.cap || 0} oz</span>
-                </div>
+          {/* Player Main Bio Table */}
+          <div className="flex-1 w-full space-y-3">
+            <div className="flex items-center justify-between border-b border-sky-500/15 pb-2">
+              <h3 className="text-xl md:text-2xl font-extrabold text-white font-serif tracking-wide flex items-center gap-2">
+                {player.name}
+              </h3>
+              {isOnline ? (
+                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono font-bold text-[10px] px-2.5 py-1 rounded-full animate-pulse">
+                  ● ONLINE
+                </span>
+              ) : (
+                <span className="bg-slate-500/20 text-slate-300 border border-slate-500/30 font-mono font-bold text-[10px] px-2.5 py-1 rounded-full">
+                  OFFLINE
+                </span>
+              )}
+            </div>
+
+            {/* Structured Info Grid (RubinOT format) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+              <div className="bg-[#080f1e]/80 px-3 py-2 rounded border border-sky-500/10 flex justify-between">
+                <span className="text-sky-300">Vocação:</span>
+                <span className="font-bold text-white">{getVocationName(player.vocation)}</span>
+              </div>
+              <div className="bg-[#080f1e]/80 px-3 py-2 rounded border border-sky-500/10 flex justify-between">
+                <span className="text-sky-300">Level:</span>
+                <span className="font-bold text-amber-300">{player.level}</span>
+              </div>
+              <div className="bg-[#080f1e]/80 px-3 py-2 rounded border border-sky-500/10 flex justify-between">
+                <span className="text-sky-300">Sexo / Gênero:</span>
+                <span className="font-bold text-white">{player.sex === 1 ? "Masculino" : "Feminino"}</span>
+              </div>
+              <div className="bg-[#080f1e]/80 px-3 py-2 rounded border border-sky-500/10 flex justify-between">
+                <span className="text-sky-300">Cidade Natal:</span>
+                <span className="font-bold text-white">{player.townName || "Thais"}</span>
+              </div>
+              <div className="bg-[#080f1e]/80 px-3 py-2 rounded border border-sky-500/10 flex justify-between">
+                <span className="text-sky-300">Status da Conta:</span>
+                <span className="font-bold text-emerald-400">VIP / Premium Account</span>
+              </div>
+              <div className="bg-[#080f1e]/80 px-3 py-2 rounded border border-sky-500/10 flex justify-between">
+                <span className="text-sky-300">Tempo de Jogo:</span>
+                <span className="font-bold text-white">{(player.onlinetime / 3600).toFixed(1)} Horas</span>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
 
             {/* HP and Mana bars */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

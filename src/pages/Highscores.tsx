@@ -167,19 +167,13 @@ export const Highscores: React.FC<HighscoresProps> = ({
                   return (
                     <tr key={player.id} className="hover:bg-sky-950/40 transition-colors">
                       <td className="px-4 py-3 text-center font-bold text-sky-300">{rank}</td>
-                      <td className="px-4 py-1.5">
+                      <td className="px-4 py-3">
                         <button
                           onClick={() => onInspectPlayerByName(player.name)}
-                          className="font-bold text-white hover:text-sky-300 hover:underline flex items-center gap-2 cursor-pointer text-left focus:outline-none"
+                          className="font-bold text-white hover:text-sky-300 hover:underline cursor-pointer text-left focus:outline-none"
                           title="Clique para olhar o personagem"
                         >
-                          <img 
-                            src={getOutfitImage(player.looktype)} 
-                            alt="" 
-                            className="w-20 h-20 object-contain shrink-0" 
-                            referrerPolicy="no-referrer"
-                          />
-                          <span>{player.name}</span>
+                          {player.name}
                         </button>
                       </td>
                       <td className="px-4 py-3 text-sky-200/80 text-[11px]">
