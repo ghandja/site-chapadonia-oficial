@@ -1024,6 +1024,11 @@ async function startServer() {
         baseUri: ["'none'"],
       },
     },
+    strictTransportSecurity: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
     referrerPolicy: { policy: "strict-origin-when-cross-origin" },
     xFrameOptions: { action: "deny" },
     xPermittedCrossDomainPolicies: { permittedPolicies: "none" },
@@ -1667,7 +1672,12 @@ async function startServer() {
     const token = generateToken(account.id);
     const chars = await findPlayersByAccount(account.id);
 
-    res.cookie("chapadonia_token", token, { httpOnly: false, maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "lax" });
+    res.cookie("chapadonia_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
 
     hooks.fire("auth:login", { accountId: account.id, email: account.email });
 
