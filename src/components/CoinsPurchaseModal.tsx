@@ -59,9 +59,10 @@ export const CoinsPurchaseModal: React.FC<CoinsPurchaseModalProps> = ({
   };
 
   const handleCopyPix = () => {
-    navigator.clipboard.writeText("victorhgos@gmail.com");
+    const pixPayload = "00020126580014BR.GOV.BCB.PIX0136b047198d-0ec9-4d74-977e-bfff30ceb1f25204000053039865802BR5924VICTOR HUGO SILVA SANTOS6008CAMBORIU62070503***63047F46";
+    navigator.clipboard.writeText(pixPayload);
     setCopied(true);
-    showNotification("Chave PIX (victorhgos@gmail.com) copiada para a área de transferência!", "success");
+    showNotification("Código PIX Copia e Cola copiado com sucesso!", "success");
     setTimeout(() => setCopied(false), 3000);
   };
 
@@ -200,19 +201,20 @@ export const CoinsPurchaseModal: React.FC<CoinsPurchaseModalProps> = ({
                 </p>
               </div>
 
-              {/* QR Code Oficial da sua Chave PIX */}
-              <div className="bg-white p-3 rounded-xl w-[170px] h-[170px] mx-auto shadow-xl border-4 border-emerald-500/40 text-center flex items-center justify-center">
+              {/* QR Code Oficial extraído do seu PDF Bradesco */}
+              <div className="bg-white p-3 rounded-xl w-[190px] h-[190px] mx-auto shadow-xl border-4 border-emerald-500/40 text-center flex items-center justify-center">
                 <img 
-                  src="/pix-qrcode.svg" 
-                  alt="QR Code PIX victorhgos@gmail.com" 
+                  src="/pix-real-qrcode.png" 
+                  alt="QR Code PIX Victor Hugo Silva Santos" 
                   className="w-full h-full object-contain"
                 />
               </div>
 
-              {/* Exibição Clara da Chave PIX */}
-              <div className="bg-[#0c1930] p-3 rounded-xl border border-sky-500/20 text-center space-y-1">
-                <span className="text-[10px] text-sky-300 font-mono block">Chave PIX E-mail:</span>
-                <strong className="text-amber-300 text-xs font-mono select-all font-bold">victorhgos@gmail.com</strong>
+              {/* Exibição dos Dados do Beneficiário */}
+              <div className="bg-[#0c1930] p-3 rounded-xl border border-sky-500/20 text-center space-y-1 text-xs font-mono">
+                <span className="text-[10px] text-sky-300 block">Beneficiário / Nome:</span>
+                <strong className="text-white font-bold block">VICTOR HUGO SILVA SANTOS</strong>
+                <span className="text-[9px] text-sky-300/70 block mt-1">Chave Aleatória: b047198d-0ec9-4d74-977e-bfff30ceb1f2</span>
               </div>
 
               {/* Botões Copiar e Simular Aprovação */}
@@ -222,7 +224,7 @@ export const CoinsPurchaseModal: React.FC<CoinsPurchaseModalProps> = ({
                   className="w-full bg-sky-950/80 hover:bg-sky-900 text-sky-200 font-mono font-bold py-2.5 px-3 rounded-lg border border-sky-500/30 flex items-center justify-center gap-2 text-xs transition-all cursor-pointer"
                 >
                   {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-sky-400" />}
-                  <span>{copied ? "Chave PIX Copiada!" : "Copiar Chave: victorhgos@gmail.com"}</span>
+                  <span>{copied ? "Código PIX Copiado!" : "Copiar Código PIX Copia e Cola"}</span>
                 </button>
 
                 <button
