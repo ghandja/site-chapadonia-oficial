@@ -145,14 +145,12 @@ export const Bazaar: React.FC<BazaarProps> = ({
                       <div className="flex justify-between items-start border-b border-sky-500/10 pb-2 gap-2">
                         <div className="flex items-center gap-2 overflow-hidden">
                           {/* Animated/static outfit preview */}
-                          <div className="w-12 h-12 shrink-0 bg-[#0d1b32] border border-sky-500/20 rounded-lg overflow-hidden flex items-center justify-center shadow-inner">
-                            <img 
-                              src={getOutfitImage(looktype)} 
-                              alt="" 
-                              className="w-16 h-16 object-contain max-w-none -translate-y-2.5" 
-                              referrerPolicy="no-referrer"
-                            />
-                          </div>
+                          <img 
+                            src={getOutfitImage(looktype)} 
+                            alt="" 
+                            className="w-16 h-16 object-contain shrink-0" 
+                            referrerPolicy="no-referrer"
+                          />
                           <div className="overflow-hidden">
                             <h4 className="text-sm font-extrabold text-white font-serif truncate" title={char.name}>{char.name}</h4>
                             <span className="text-[10px] text-sky-300 font-bold font-mono">{char.vocation}</span>
@@ -268,14 +266,12 @@ export const Bazaar: React.FC<BazaarProps> = ({
 
               {/* Modal Banner */}
               <div className="bg-[#080f1e] p-4 flex flex-col sm:flex-row gap-4 items-center border-b border-sky-500/30 text-sky-200">
-                <div className="w-16 h-16 shrink-0 bg-[#0d1b32] rounded-xl border border-sky-500/30 flex items-center justify-center overflow-hidden shadow-inner">
                   <img 
                     src={getOutfitImage(char.looktype || 128)} 
                     alt="" 
-                    className="w-24 h-24 object-contain max-w-none -translate-y-4" 
+                    className="w-24 h-24 object-contain shrink-0" 
                     referrerPolicy="no-referrer"
                   />
-                </div>
                 <div className="text-center sm:text-left space-y-1 overflow-hidden">
                   <h4 className="text-white text-base font-serif font-extrabold truncate">{char.name}</h4>
                   <div className="flex flex-wrap gap-1.5 justify-center sm:justify-start font-mono text-[10px]">
@@ -454,14 +450,12 @@ export const Bazaar: React.FC<BazaarProps> = ({
                     </p>
 
                     <div className="bg-[#0d1b32] border border-sky-500/20 rounded-xl p-4 flex flex-col items-center gap-3">
-                      <div className="w-24 h-24 bg-[#080f1e] border border-sky-500/30 rounded-full flex items-center justify-center overflow-hidden shadow-inner">
                         <img 
                           src={getOutfitImage(char.looktype || 128)} 
                           alt="" 
-                          className="w-32 h-32 object-contain max-w-none -translate-y-4 scale-110" 
+                          className="w-32 h-32 object-contain" 
                           referrerPolicy="no-referrer"
                         />
-                      </div>
                       <div className="text-center space-y-1">
                         <h5 className="font-serif font-extrabold text-white text-sm">{details.outfit.name}</h5>
                         <p className="text-[11px] text-sky-200/80 font-mono leading-relaxed">{details.outfit.description}</p>

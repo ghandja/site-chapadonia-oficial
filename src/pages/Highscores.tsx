@@ -173,14 +173,12 @@ export const Highscores: React.FC<HighscoresProps> = ({
                           className="font-bold text-white hover:text-sky-300 hover:underline flex items-center gap-2 cursor-pointer text-left focus:outline-none"
                           title="Clique para olhar o personagem"
                         >
-                          <div className="w-8 h-8 shrink-0 overflow-hidden flex items-center justify-center bg-[#080f1e] rounded-lg border border-sky-500/20">
-                            <img 
-                              src={getOutfitImage(player.looktype)} 
-                              alt="" 
-                              className="w-12 h-12 object-contain max-w-none -translate-y-2" 
-                              referrerPolicy="no-referrer"
-                            />
-                          </div>
+                          <img 
+                            src={getOutfitImage(player.looktype)} 
+                            alt="" 
+                            className="w-12 h-12 object-contain shrink-0" 
+                            referrerPolicy="no-referrer"
+                          />
                           <span>{player.name}</span>
                         </button>
                       </td>

@@ -112,14 +112,12 @@ export const PlayerInfo: React.FC<PlayerInfoProps> = ({
             {/* OUTFIT GRANDE CENTRALIZADO */}
             <div className="bg-[#0c1930] border border-sky-500/30 rounded-2xl p-6 flex flex-col items-center justify-center text-center shadow-lg relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1 bg-sky-400" />
-              <div className="relative w-32 h-32 bg-[#080f1e] rounded-full border-2 border-sky-500/20 flex items-center justify-center overflow-hidden shadow-inner mb-3">
                 <img 
                   src={getOutfitImage(player.looktype)} 
                   alt={player.name} 
-                  className="w-48 h-48 object-contain max-w-none -translate-y-6 scale-110" 
+                  className="w-40 h-40 object-contain mb-3" 
                   referrerPolicy="no-referrer"
                 />
-              </div>
               <h3 className="text-base font-extrabold text-white font-serif uppercase tracking-wider">{player.name}</h3>
               <p className="text-[11px] text-sky-300 font-mono mt-0.5">
                 Outfit Clássico — Looktype {player.looktype || 128}
