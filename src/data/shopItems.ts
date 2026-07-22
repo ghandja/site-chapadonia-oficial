@@ -16,7 +16,7 @@ export interface ShopItem {
 }
 
 export const SHOP_CATEGORIES = [
-  { id: "gold", label: "Tibia Gold", icon: "https://tibia.fandom.com/wiki/Special:FilePath/Gold_Ingot.gif" },
+  { id: "gold", label: "Tibia Gold", icon: "https://tibia.fandom.com/wiki/Special:FilePath/Crystal_Coin.gif" },
   { id: "armors", label: "Armaduras", icon: "https://tibia.fandom.com/wiki/Special:FilePath/Magic_Plate_Armor.gif" },
   { id: "weapons", label: "Armas", icon: "https://tibia.fandom.com/wiki/Special:FilePath/Stonecutter_Axe.gif" },
   { id: "distance", label: "Distância", icon: "https://tibia.fandom.com/wiki/Special:FilePath/Crystalline_Arrow.gif" },
