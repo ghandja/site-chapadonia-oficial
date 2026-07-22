@@ -266,7 +266,7 @@ export const Account: React.FC<AccountProps> = ({
                           <img 
                             src={getOutfitImage(char.looktype || 128)} 
                             alt="" 
-                            className="w-16 h-16 object-contain shrink-0" 
+                            className="w-28 h-28 object-contain shrink-0" 
                             referrerPolicy="no-referrer"
                           />
                         <div>

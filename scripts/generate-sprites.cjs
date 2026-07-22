@@ -6,25 +6,6 @@ const GIFEncoder = require("gif-encoder-2");
 const SOURCE = "C:\\Users\\Usuario\\Downloads\\animated-items-and-outfits\\animated-outfits\\outfits\\outfits_anim";
 const DEST = "C:\\Users\\Usuario\\Documents\\UniServerZ\\www\\sprites";
 
-function createAnimatedGif(frames, width, height) {
-  return new Promise((resolve, reject) => {
-    const encoder = new GIFEncoder(width, height);
-    const file = fs.createWriteStream(path.join(DEST, `Outfit_${looktype}.gif`));
-    encoder.createReadStream().pipe(file);
-
-    encoder.setRepeat(0);
-    encoder.setDelay(150);
-    encoder.start();
-    for (const frame of frames) {
-      encoder.addFrame(frame);
-    }
-    encoder.finish();
-
-    file.on("finish", resolve);
-    file.on("error", reject);
-  });
-}
-
 function readPNG(filepath) {
   return new Promise((resolve, reject) => {
     const stream = fs.createReadStream(filepath);
@@ -35,27 +16,37 @@ function readPNG(filepath) {
 }
 
 async function processLooktype(lt, dir) {
+  // Try direction 3 (front) with all animation frames 1-8
+  // Format: {animation}_1_1_3.png
   const frames = [];
-  let width, height;
+  let width, height, foundDir;
 
-  for (const f of ["1", "2", "3", "4"]) {
-    const fp = path.join(dir, `5_1_1_${f}.png`);
-    if (!fs.existsSync(fp)) continue;
-    const png = await readPNG(fp);
-    if (!width) { width = png.width; height = png.height; }
-    frames.push(png.data);
+  for (const tryDir of [3, 2, 4, 1]) {
+    frames.length = 0;
+    width = null;
+    for (let a = 1; a <= 8; a++) {
+      const fp = path.join(dir, `${a}_1_1_${tryDir}.png`);
+      if (!fs.existsSync(fp)) break;
+      const png = await readPNG(fp);
+      if (!width) { width = png.width; height = png.height; }
+      frames.push(png.data);
+    }
+    if (frames.length >= 2) { foundDir = tryDir; break; }
   }
 
-  if (frames.length === 0) {
-    for (const d of ["3", "5", "1"]) {
-      for (const f of ["1", "2", "3", "4"]) {
-        const fp = path.join(dir, `${d}_1_1_${f}.png`);
-        if (!fs.existsSync(fp)) continue;
+  // Fallback: single frame any direction
+  if (!foundDir) {
+    frames.length = 0;
+    width = null;
+    for (const tryDir of [3, 2, 1, 4]) {
+      const fp = path.join(dir, `1_1_1_${tryDir}.png`);
+      if (fs.existsSync(fp)) {
         const png = await readPNG(fp);
-        if (!width) { width = png.width; height = png.height; }
+        width = png.width; height = png.height;
         frames.push(png.data);
+        foundDir = tryDir;
+        break;
       }
-      if (frames.length > 0) break;
     }
   }
 
@@ -79,15 +70,13 @@ async function processLooktype(lt, dir) {
   encoder.createReadStream().pipe(file);
 
   encoder.setRepeat(0);
-  encoder.setDelay(150);
+  encoder.setDelay(120);
   encoder.start();
-  for (const frame of frames) {
-    encoder.addFrame(frame);
-  }
+  for (const frame of frames) encoder.addFrame(frame);
   encoder.finish();
 
   await new Promise((res, rej) => {
-    file.on("finish", () => { console.log(`  OK ${lt}: ${frames.length} frames`); res(); });
+    file.on("finish", () => { console.log(`  OK ${lt}: ${frames.length} frames, dir=${foundDir}`); res(); });
     file.on("error", rej);
   });
 }
@@ -95,18 +84,18 @@ async function processLooktype(lt, dir) {
 async function main() {
   const dirs = fs.readdirSync(SOURCE, { withFileTypes: true }).filter(d => d.isDirectory());
   console.log(`Processing ${dirs.length} looktypes...`);
-  let count = 0;
+  let count = 0, animated = 0;
   for (const dir of dirs) {
-    looktype = dir.name;
+    const lt = dir.name;
     try {
-      await processLooktype(looktype, path.join(SOURCE, looktype));
+      const before = fs.existsSync(path.join(DEST, `Outfit_${lt}.gif`)) ? fs.statSync(path.join(DEST, `Outfit_${lt}.gif`)).size : 0;
+      await processLooktype(lt, path.join(SOURCE, lt));
       count++;
     } catch (err) {
-      console.error(`  ERROR ${looktype}: ${err.message}`);
+      console.error(`  ERROR ${lt}: ${err.message}`);
     }
   }
   console.log(`\nDone: ${count}/${dirs.length}`);
 }
 
-let looktype;
 main().catch(console.error);

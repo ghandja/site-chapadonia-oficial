@@ -115,7 +115,7 @@ export const PlayerInfo: React.FC<PlayerInfoProps> = ({
                 <img 
                   src={getOutfitImage(player.looktype)} 
                   alt={player.name} 
-                  className="w-40 h-40 object-contain mb-3" 
+                  className="w-64 h-64 object-contain mb-3" 
                   referrerPolicy="no-referrer"
                 />
               <h3 className="text-base font-extrabold text-white font-serif uppercase tracking-wider">{player.name}</h3>

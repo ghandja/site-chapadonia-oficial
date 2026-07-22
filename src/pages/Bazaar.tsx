@@ -148,7 +148,7 @@ export const Bazaar: React.FC<BazaarProps> = ({
                           <img 
                             src={getOutfitImage(looktype)} 
                             alt="" 
-                            className="w-16 h-16 object-contain shrink-0" 
+                            className="w-28 h-28 object-contain shrink-0" 
                             referrerPolicy="no-referrer"
                           />
                           <div className="overflow-hidden">
@@ -269,7 +269,7 @@ export const Bazaar: React.FC<BazaarProps> = ({
                   <img 
                     src={getOutfitImage(char.looktype || 128)} 
                     alt="" 
-                    className="w-24 h-24 object-contain shrink-0" 
+                    className="w-40 h-40 object-contain shrink-0" 
                     referrerPolicy="no-referrer"
                   />
                 <div className="text-center sm:text-left space-y-1 overflow-hidden">
@@ -453,7 +453,7 @@ export const Bazaar: React.FC<BazaarProps> = ({
                         <img 
                           src={getOutfitImage(char.looktype || 128)} 
                           alt="" 
-                          className="w-32 h-32 object-contain" 
+                          className="w-56 h-56 object-contain" 
                           referrerPolicy="no-referrer"
                         />
                       <div className="text-center space-y-1">

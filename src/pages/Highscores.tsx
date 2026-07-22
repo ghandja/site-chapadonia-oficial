@@ -176,7 +176,7 @@ export const Highscores: React.FC<HighscoresProps> = ({
                           <img 
                             src={getOutfitImage(player.looktype)} 
                             alt="" 
-                            className="w-12 h-12 object-contain shrink-0" 
+                            className="w-20 h-20 object-contain shrink-0" 
                             referrerPolicy="no-referrer"
                           />
                           <span>{player.name}</span>
