@@ -114,7 +114,19 @@ export default function App() {
   const [adminConfig, setAdminConfig] = useState<AdminConfig | null>(null);
   const [adminConfigLoading, setAdminConfigLoading] = useState(false);
 
-  // Administrative functions
+  // Helper for admin fetch with Auth header
+  const adminFetch = async (url: string, options: RequestInit = {}) => {
+    const token = sessionStorage.getItem("chapadonia_token") || localStorage.getItem("chapadonia_token");
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(options.headers as Record<string, string> || {}),
+    };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    return fetch(url, { ...options, headers, credentials: "include" });
+  };
+
   const fetchNews = async () => {
     setNewsLoading(true);
     try {
@@ -136,7 +148,7 @@ export default function App() {
   const fetchAdminPlayers = async () => {
     setAdminPlayersLoading(true);
     try {
-      const res = await fetch("/api/admin/players");
+      const res = await adminFetch("/api/admin/players");
       if (res.ok) {
         const contentType = res.headers.get("content-type");
         if (contentType && contentType.includes("application/json")) {
@@ -154,7 +166,7 @@ export default function App() {
   const fetchAdminConfig = async () => {
     setAdminConfigLoading(true);
     try {
-      const res = await fetch("/api/admin/config");
+      const res = await adminFetch("/api/admin/config");
       if (res.ok) {
         const contentType = res.headers.get("content-type");
         if (contentType && contentType.includes("application/json")) {
@@ -193,9 +205,8 @@ export default function App() {
     const method = newsPayload.id ? "PUT" : "POST";
 
     try {
-      const res = await fetch(url, {
+      const res = await adminFetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newsPayload)
       });
 
@@ -213,7 +224,7 @@ export default function App() {
 
   const handleDeleteNews = async (id: number) => {
     try {
-      const res = await fetch(`/api/admin/news/${id}`, { method: "DELETE" });
+      const res = await adminFetch(`/api/admin/news/${id}`, { method: "DELETE" });
       if (res.ok) {
         showNotification("Notícia excluída com sucesso!", "success");
         fetchNews();
@@ -227,9 +238,8 @@ export default function App() {
 
   const handleSavePlayer = async (id: number, playerPayload: any) => {
     try {
-      const res = await fetch(`/api/admin/players/${id}`, {
+      const res = await adminFetch(`/api/admin/players/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(playerPayload)
       });
 
@@ -248,7 +258,7 @@ export default function App() {
 
   const handleDeletePlayer = async (id: number) => {
     try {
-      const res = await fetch(`/api/admin/players/${id}`, { method: "DELETE" });
+      const res = await adminFetch(`/api/admin/players/${id}`, { method: "DELETE" });
       if (res.ok) {
         showNotification("Jogador deletado do banco de dados!", "success");
         fetchAdminPlayers();
@@ -268,9 +278,8 @@ export default function App() {
       return;
     }
     try {
-      const res = await fetch(`/api/admin/accounts/${accountId}/add-coins`, {
+      const res = await adminFetch(`/api/admin/accounts/${accountId}/add-coins`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount })
       });
 
@@ -288,9 +297,8 @@ export default function App() {
 
   const handleSaveGuildAdmin = async (guildId: number, guildPayload: any) => {
     try {
-      const res = await fetch(`/api/admin/guilds/${guildId}`, {
+      const res = await adminFetch(`/api/admin/guilds/${guildId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(guildPayload)
       });
 
@@ -307,7 +315,7 @@ export default function App() {
 
   const handleDeleteGuildAdmin = async (id: number) => {
     try {
-      const res = await fetch(`/api/admin/guilds/${id}`, { method: "DELETE" });
+      const res = await adminFetch(`/api/admin/guilds/${id}`, { method: "DELETE" });
       if (res.ok) {
         showNotification("Guilda dissolvida e deletada com sucesso!", "success");
         fetchGuilds();
@@ -321,9 +329,8 @@ export default function App() {
 
   const handleSaveGlobalConfig = async (configPayload: AdminConfig) => {
     try {
-      const res = await fetch("/api/admin/config", {
+      const res = await adminFetch("/api/admin/config", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(configPayload)
       });
 
@@ -849,6 +856,10 @@ export default function App() {
   };
 
   const handleLoginSuccess = (account: any, token: string, chars: any[]) => {
+    if (token) {
+      sessionStorage.setItem("chapadonia_token", token);
+      localStorage.setItem("chapadonia_token", token);
+    }
     setUserAccount(account);
     const mapped = (chars || []).map((c: any) => ({
       name: c.name,

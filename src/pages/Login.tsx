@@ -4,7 +4,7 @@ import { api } from "../api";
 import { getVocationName } from "../utils";
 
 interface LoginProps {
-  onLoginSuccess: (account: any, characters: any[]) => void;
+  onLoginSuccess: (account: any, token: string, characters: any[]) => void;
   setCurrentSitePage: (page: any) => void;
   showNotification: (msg: string, type: "success" | "error" | "info") => void;
 }
@@ -47,7 +47,7 @@ export const Login: React.FC<LoginProps> = ({
         premium: true
       }));
 
-      onLoginSuccess(data.account, mappedMyChars);
+      onLoginSuccess(data.account, data.token, mappedMyChars);
       showNotification("Bem-vindo de volta! Acesso concedido!", "success");
       setCurrentSitePage("account");
     } catch (err: any) {
