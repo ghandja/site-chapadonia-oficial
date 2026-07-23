@@ -3,6 +3,7 @@ import {
   OnlinePlayer,
   HighscorePlayer,
   PlayerDetails,
+  RecentDeath,
   AccountInfo,
   NewsItem,
   AdminConfig,
@@ -130,6 +131,10 @@ export const api = {
 
   getPlayerDetails: (name: string): Promise<{ player: PlayerDetails }> => {
     return apiFetch<{ player: PlayerDetails }>(`/api/players/${encodeURIComponent(name.trim())}`);
+  },
+
+  getRecentDeaths: (): Promise<{ deaths: RecentDeath[] }> => {
+    return apiFetch<{ deaths: RecentDeath[] }>("/api/deaths");
   },
 
   // --- GUILDS ENDPOINTS ---

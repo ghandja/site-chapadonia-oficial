@@ -222,11 +222,29 @@ function rowToPlayer(row: any): Player {
   };
 }
 
+async function getPlayerDeathsMySQL(playerId: number): Promise<any[]> {
+  if (!pool) return [];
+  try {
+    const [rows] = await pool.query(
+      "SELECT time, level, killed_by, is_player, mostdamage_by, mostdamage_is_player FROM player_deaths WHERE player_id = ? ORDER BY time DESC LIMIT 20",
+      [playerId]
+    );
+    return rows as any[];
+  } catch (err) {
+    logger.error({ err }, "MySQL getPlayerDeaths");
+    return [];
+  }
+}
+
 async function findPlayersByAccount(accountId: number): Promise<Player[]> {
   if (!pool) return [];
   try {
     const [rows] = await pool.query(`SELECT ${PLAYER_SELECT} FROM players WHERE account_id = ? AND deletion = 0`, [accountId]);
-    return (rows as any[]).map(rowToPlayer);
+    const players = (rows as any[]).map(rowToPlayer);
+    for (const p of players) {
+      p.deaths = await getPlayerDeathsMySQL(p.id);
+    }
+    return players;
   } catch (err) { console.error("MySQL findPlayersByAccount:", err); return []; }
 }
 
@@ -242,7 +260,11 @@ async function findPlayerByNameMySQL(name: string): Promise<Player | null> {
   if (!pool) return null;
   try {
     const [rows] = await pool.query(`SELECT ${PLAYER_SELECT} FROM players WHERE name = ? AND deletion = 0`, [name]);
-    if ((rows as any[]).length > 0) return rowToPlayer((rows as any[])[0]);
+    if ((rows as any[]).length > 0) {
+      const player = rowToPlayer((rows as any[])[0]);
+      player.deaths = await getPlayerDeathsMySQL(player.id);
+      return player;
+    }
     return null;
   } catch (err) { console.error("MySQL findPlayerByName:", err); return null; }
 }
@@ -1585,6 +1607,25 @@ async function startServer() {
     const paginated = filtered.slice(startIndex, startIndex + pLimit);
 
     res.json({ players: paginated, total: filtered.length, page: pPage, totalPages: Math.ceil(filtered.length / pLimit) });
+  });
+
+  // 3.5. Fetch Recent Deaths across the server — from MySQL
+  app.get("/api/deaths", async (req, res) => {
+    if (!pool) return res.json({ deaths: [] });
+    try {
+      const [rows] = await pool.query(`
+        SELECT pd.player_id, pd.time, pd.level, pd.killed_by, pd.is_player, pd.mostdamage_by, pd.mostdamage_is_player, p.name as player_name, p.looktype, p.vocation, p.sex
+        FROM player_deaths pd
+        JOIN players p ON pd.player_id = p.id
+        WHERE p.deletion = 0
+        ORDER BY pd.time DESC
+        LIMIT 50
+      `);
+      res.json({ deaths: rows });
+    } catch (err) {
+      logger.error({ err }, "MySQL /api/deaths error");
+      res.json({ deaths: [] });
+    }
   });
 
   // 4. Fetch Player Details by Name (Character Lookup) — from MySQL

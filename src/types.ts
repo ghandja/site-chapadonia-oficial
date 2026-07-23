@@ -193,7 +193,24 @@ export interface PlayerDetails {
     time: number;
     level: number;
     killed_by?: string;
+    is_player?: number;
+    mostdamage_by?: string;
+    mostdamage_is_player?: number;
   }>;
+}
+
+export interface RecentDeath {
+  player_id: number;
+  player_name: string;
+  time: number;
+  level: number;
+  killed_by: string;
+  is_player: number;
+  mostdamage_by?: string;
+  mostdamage_is_player?: number;
+  looktype?: number;
+  vocation?: number;
+  sex?: number;
 }
 
 export interface AdminConfig {
