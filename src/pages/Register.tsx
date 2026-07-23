@@ -78,7 +78,7 @@ export const Register: React.FC<RegisterProps> = ({
           CRIAR CONTA & NOVO JOGADOR
         </h2>
         <p className="text-xs text-sky-200/80 font-mono mt-1">
-          Crie sua conta no {serverName}. Suas credenciais serão criptografadas e salvas de forma segura.
+          Suas credenciais serão criptografadas e salvas de forma segura.
         </p>
       </div>
 
@@ -94,7 +94,6 @@ export const Register: React.FC<RegisterProps> = ({
               <input 
                 type="email" 
                 required
-                placeholder="seu_email@exemplo.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-[#080f1e] border border-sky-500/30 rounded px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono text-xs"
@@ -108,7 +107,6 @@ export const Register: React.FC<RegisterProps> = ({
               <input 
                 type="text" 
                 required
-                placeholder="Ex: ChapadoniaPlayer"
                 value={accName}
                 onChange={(e) => setAccName(e.target.value)}
                 className="w-full bg-[#080f1e] border border-sky-500/30 rounded px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono text-xs"
@@ -125,7 +123,6 @@ export const Register: React.FC<RegisterProps> = ({
               <input 
                 type="password" 
                 required
-                placeholder="Sua senha mística"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-[#080f1e] border border-sky-500/30 rounded px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono text-xs"
@@ -139,7 +136,6 @@ export const Register: React.FC<RegisterProps> = ({
               <input 
                 type="password" 
                 required
-                placeholder="Repita sua senha"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="w-full bg-[#080f1e] border border-sky-500/30 rounded px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono text-xs"
@@ -163,7 +159,6 @@ export const Register: React.FC<RegisterProps> = ({
                 <input 
                   type="text" 
                   required
-                  placeholder="Ex: Master Legend"
                   value={charName}
                   onChange={(e) => setCharName(e.target.value)}
                   className="w-full bg-[#080f1e] border border-sky-500/30 rounded px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono text-xs"
@@ -177,7 +172,7 @@ export const Register: React.FC<RegisterProps> = ({
                   onChange={(e) => setVocation(e.target.value)}
                   className="w-full bg-[#080f1e] border border-sky-500/30 rounded px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-serif text-xs cursor-pointer"
                 >
-                  {VOCATIONS.filter(v => v !== "None").map(v => (
+                  {["Knight", "Sorcerer", "Paladin", "Druid"].map(v => (
                     <option key={v} value={v}>{v}</option>
                   ))}
                 </select>
