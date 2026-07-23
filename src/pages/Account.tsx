@@ -263,12 +263,14 @@ export const Account: React.FC<AccountProps> = ({
                     <div key={char.name} className="bg-[#080f1e]/40 border border-sky-500/10 rounded-xl p-4 flex flex-col gap-3 hover:border-sky-500/30 transition-all duration-200">
                       {/* Info Básica */}
                       <div className="flex items-center gap-3">
+                        <div className="w-16 h-16 bg-[#080f1e] rounded-xl border border-amber-500/40 flex items-center justify-center overflow-hidden shadow-inner relative shrink-0 p-1">
                           <img 
                             src={getOutfitImage(char.looktype || 128)} 
                             alt="" 
-                            className="w-28 h-28 object-contain shrink-0" 
+                            className="max-w-full max-h-full object-contain filter drop-shadow-md" 
                             referrerPolicy="no-referrer"
                           />
+                        </div>
                         <div>
                           <h4 className="font-extrabold text-white text-sm flex items-center gap-1.5">
                             {char.name}

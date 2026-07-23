@@ -62,12 +62,12 @@ export const LastKills: React.FC = () => {
               className="bg-[#0e1c36]/80 hover:bg-[#122344] transition-all border border-sky-500/20 hover:border-sky-500/50 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-sky-950/80 border border-sky-500/30 flex items-center justify-center shrink-0">
+                <div className="w-14 h-14 bg-[#080f1e] rounded-xl border border-amber-500/40 flex items-center justify-center overflow-hidden shadow-inner relative shrink-0 p-1">
                   {death.looktype ? (
                     <img
                       src={`/api/proxy/sprite/Outfit_${death.looktype}.gif`}
                       alt="Outfit"
-                      className="w-8 h-8 object-contain"
+                      className="max-w-full max-h-full object-contain filter drop-shadow-md"
                       onError={(e) => {
                         (e.target as HTMLElement).style.display = "none";
                       }}

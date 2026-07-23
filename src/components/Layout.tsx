@@ -306,7 +306,7 @@ export const Layout: React.FC<LayoutProps> = ({
               <div className="p-3 text-center space-y-2 flex flex-col items-center border-b border-[#312213]">
                 {boostedCreature ? (
                   <>
-                    <div className="w-16 h-16 bg-[#080f1e] rounded-xl border border-[#795221]/40 flex items-center justify-center overflow-hidden shadow-inner relative shrink-0 p-1">
+                    <div className="w-16 h-16 bg-[#080f1e] rounded-xl border border-amber-500/40 flex items-center justify-center overflow-hidden shadow-inner relative shrink-0 p-1">
                       <img 
                         src={boostedCreature.looktype > 0 && boostedCreature.looktype <= 1875 ? `/sprites/Outfit_${boostedCreature.looktype}.gif` : `https://tibia.fandom.com/wiki/Special:FilePath/${encodeURIComponent(boostedCreature.name.replace(/\s+/g, "_"))}.gif`} 
                         alt={boostedCreature.name} 
