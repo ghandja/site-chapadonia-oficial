@@ -59,7 +59,7 @@ export const Register: React.FC<RegisterProps> = ({
         premium: true
       }));
 
-      onRegisterSuccess(loginData.account, mappedMyChars);
+      onRegisterSuccess(loginData.account, loginData.token, mappedMyChars);
       setCurrentSitePage("account");
     } catch (err: any) {
       console.error(err);
