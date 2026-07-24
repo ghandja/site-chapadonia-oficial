@@ -1150,6 +1150,7 @@ async function startServer() {
   await initializeMySQL();
 
   const app = express();
+  app.set("trust proxy", true);
   const PORT = Number(process.env.PORT || 3000);
 
   // Redirect HTTP to HTTPS in production (only if explicitly enabled via FORCE_HTTPS)
