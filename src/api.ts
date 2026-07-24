@@ -277,10 +277,16 @@ export const api = {
     return apiFetch<any[]>("/api/bazaar");
   },
 
-  listBazaar: (characterName: string, price: number): Promise<{ message: string; coins: number; characters: any[]; bazaarListings: any[] }> => {
+  listBazaar: (
+    characterName: string, 
+    price: number, 
+    recoveryKey?: string, 
+    isEmailConfirmed?: boolean, 
+    isPhoneConfirmed?: boolean
+  ): Promise<{ message: string; coins: number; characters: any[]; bazaarListings: any[] }> => {
     return apiFetch<{ message: string; coins: number; characters: any[]; bazaarListings: any[] }>("/api/bazaar/list", {
       method: "POST",
-      body: JSON.stringify({ characterName, price }),
+      body: JSON.stringify({ characterName, price, recoveryKey, isEmailConfirmed, isPhoneConfirmed }),
     });
   },
 

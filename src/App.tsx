@@ -629,30 +629,47 @@ export default function App() {
   };
 
   // Gerar Recovery Key para a conta logada
-  const handleGenerateRK = () => {
+  const handleGenerateRK = async () => {
     if (!userAccount?.name) {
       showNotification("Você precisa estar logado para gerar uma Recovery Key!", "error");
       return;
     }
-    const accNameLower = userAccount.name.toLowerCase();
-    if (recoveryKeys[accNameLower]) {
+    if (userAccount.hasRecoveryKey) {
       showNotification("Sua conta já possui uma Recovery Key gerada!", "error");
       return;
     }
 
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    const segment = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-    const newRK = `${segment()}-${segment()}-${segment()}-${segment()}`;
+    try {
+      const token = localStorage.getItem("chapadonia_token") || sessionStorage.getItem("chapadonia_token");
+      const res = await fetch("/api/auth/generate-rk", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        }
+      });
 
-    setRecoveryKeys(prev => ({
-      ...prev,
-      [accNameLower]: newRK
-    }));
-    setSessionGeneratedKeys(prev => ({
-      ...prev,
-      [accNameLower]: newRK
-    }));
-    showNotification("Recovery Key gerada com sucesso! Guarde-a com segurança.", "success");
+      const data = await res.json();
+      if (res.ok) {
+        setUserAccount(prev => prev ? { ...prev, hasRecoveryKey: true } : prev);
+        if (data.recoveryKey) {
+          const accNameLower = userAccount.name.toLowerCase();
+          setSessionGeneratedKeys(prev => ({
+            ...prev,
+            [accNameLower]: data.recoveryKey
+          }));
+          showNotification("Recovery Key gerada com sucesso! Guarde-a agora antes de deslogar.", "success");
+        } else {
+          showNotification(data.message || "Recovery Key gerada com sucesso!", "success");
+        }
+        await fetchAuthMe();
+      } else {
+        showNotification(data.message || "Erro ao gerar Recovery Key.", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      showNotification("Erro ao conectar com o servidor ao gerar Recovery Key.", "error");
+    }
   };
 
   // Criar personagem secundário dentro da conta logada
@@ -797,23 +814,15 @@ export default function App() {
   };
 
   // Vender personagem no Bazaar
-  const handleListCharacterOnBazaar = async (char: PlayerCharacter, passedPrice?: number) => {
+  const handleListCharacterOnBazaar = async (
+    char: PlayerCharacter, 
+    passedPrice?: number, 
+    recoveryKey?: string, 
+    isEmailConfirmed?: boolean, 
+    isPhoneConfirmed?: boolean
+  ) => {
     if (!userAccount) {
       showNotification("Você precisa estar logado para vender personagens!", "error");
-      return;
-    }
-
-    const accLower = userAccount.name.toLowerCase();
-
-    // 1. Verificar se o e-mail está confirmado
-    if (!confirmedEmails[accLower]) {
-      showNotification("Segurança: Você precisa confirmar o seu e-mail de cadastro para poder vender personagens!", "error");
-      return;
-    }
-
-    // 2. Verificar se possui Recovery Key
-    if (!recoveryKeys[accLower]) {
-      showNotification("Segurança: Você precisa gerar uma Recovery Key para a sua conta antes de vender personagens!", "error");
       return;
     }
 
@@ -824,7 +833,7 @@ export default function App() {
     }
 
     try {
-      const res = await api.listBazaar(char.name, price);
+      const res = await api.listBazaar(char.name, price, recoveryKey, isEmailConfirmed, isPhoneConfirmed);
       setCoins(res.coins);
       setUserAccount(prev => prev ? { ...prev, coins: res.coins } : null);
       setBazaarListings(res.bazaarListings);
@@ -848,14 +857,18 @@ export default function App() {
 
   // Logout handle
   const handleLogout = () => {
+    localStorage.removeItem("chapadonia_token");
+    sessionStorage.removeItem("chapadonia_token");
     setUserAccount(null);
     setMyCharacters([]);
+    setSessionGeneratedKeys({});
     setViewMode("site");
     setCurrentSitePage("news");
     showNotification("Conta desconectada com sucesso.", "info");
   };
 
   const handleLoginSuccess = (account: any, token: string, chars: any[]) => {
+    setSessionGeneratedKeys({});
     if (token) {
       sessionStorage.setItem("chapadonia_token", token);
       localStorage.setItem("chapadonia_token", token);
@@ -1003,7 +1016,18 @@ export default function App() {
                 <Route path="/highscores" element={<Highscores onInspectPlayerByName={handleInspectPlayerByName} onlinePlayersList={onlinePlayersList} serverName={config.serverName} />} />
                 <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} showNotification={showNotification} />} />
                 <Route path="/register" element={<Register onRegisterSuccess={handleLoginSuccess} showNotification={showNotification} />} />
-                <Route path="/account" element={userAccount ? <Account userAccount={userAccount} myCharacters={myCharacters} onLogout={handleLogout} coins={coins} confirmedEmails={confirmedEmails} recoveryKeys={recoveryKeys} sessionGeneratedKeys={sessionGeneratedKeys} stashItems={stashItems} itemSellPrice={itemSellPrice} setItemSellPrice={setItemSellPrice} sellPrice={sellPrice} setSellPrice={setSellPrice} onConfirmEmail={handleConfirmEmail} onGenerateRK={handleGenerateRK} onCreateSecondaryChar={handleCreateSecondaryChar} onListItemOnMarket={handleListItemOnMarket} onRemoveItemFromMarket={handleRemoveItemFromMarket} onListCharacterOnBazaar={handleListCharacterOnBazaar} onGetInitialStashItems={handleGetInitialStashItems} showNotification={showNotification} /> : <Login onLoginSuccess={handleLoginSuccess} showNotification={showNotification} />} />
+                <Route path="/account" element={userAccount ? <Account userAccount={userAccount} myCharacters={myCharacters} onLogout={handleLogout} coins={coins} confirmedEmails={confirmedEmails} recoveryKeys={recoveryKeys} sessionGeneratedKeys={sessionGeneratedKeys} onConfirmEmail={handleConfirmEmail} onGenerateRK={handleGenerateRK} onCreateSecondaryChar={handleCreateSecondaryChar} onListCharacterOnBazaar={handleListCharacterOnBazaar} showNotification={showNotification} onDeleteCharacterSuccess={(chars) => {
+                  const mapped = (chars || []).map((c: any) => ({
+                    name: c.name,
+                    vocation: getVocationName(c.vocation),
+                    level: c.level,
+                    gender: (c.sex === 1 ? "Masculino" : "Feminino") as any,
+                    skills: { main: 50, shield: 50 },
+                    online: false,
+                    premium: true
+                  }));
+                  setMyCharacters(mapped);
+                }} /> : <Login onLoginSuccess={handleLoginSuccess} showNotification={showNotification} />} />
                 <Route path="/player_info" element={inspectedPlayerDetails ? <PlayerInfo player={inspectedPlayerDetails} onlinePlayersList={onlinePlayersList} onBack={() => navigate("/highscores")} /> : <Home userAccount={userAccount} setCurrentSitePage={setCurrentSitePage} />} />
                 <Route path="/guilds" element={<Guilds guildsList={guildsList} guildsLoading={guildsLoading} userAccount={userAccount} myCharacters={myCharacters} onJoinGuild={handleJoinGuild} onLeaveGuild={handleLeaveGuild} onCreateGuild={handleCreateGuild} showNotification={showNotification} onInspectPlayer={handleInspectPlayerByName} setShowLoginModal={(show) => { if (show) navigate("/login"); }} />} />
                 <Route path="/shop" element={<Shop coins={coins} myCharacters={myCharacters} stashItems={stashItems} onBuyMarketItem={handleBuyMarketItem} onRemoveItemFromMarket={handleRemoveItemFromMarket} onSimulateSomeoneBuyingMyItem={handleSimulateSomeoneBuyingMyItem} onAnnounceNewItem={handleAnnounceNewItem} userAccount={userAccount} setShowLoginModal={(show) => { if (show) navigate("/login"); }} setShowPixModal={(show) => setCoinsModalOpen(show)} showNotification={showNotification} />} />

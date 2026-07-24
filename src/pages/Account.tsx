@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { 
   LockKeyhole, LogOut, Users, Coins, CheckCircle2, Copy, Trash, Sparkles, 
-  KeyRound, Gift, ArrowRight, ShieldAlert, BadgeCheck
+  KeyRound, Gift, ArrowRight, ShieldAlert, BadgeCheck, Smartphone, X, AlertTriangle, Mail
 } from "lucide-react";
 import { AccountInfo, PlayerCharacter } from "../types";
 import { getOutfitImage } from "../utils";
@@ -16,13 +16,14 @@ interface AccountProps {
   recoveryKeys: Record<string, boolean>;
   sessionGeneratedKeys: Record<string, string>;
   onGenerateRK: () => void;
-  onListCharacterOnBazaar: (char: PlayerCharacter, price: number) => void;
+  onListCharacterOnBazaar: (char: PlayerCharacter, price: number, recoveryKey?: string, isEmailConfirmed?: boolean, isPhoneConfirmed?: boolean) => void;
   onCreateSecondaryChar: (name: string, vocation: string, gender: string) => Promise<boolean>;
   showNotification: (msg: string, type: "success" | "error" | "info") => void;
   setShowPassModal?: (show: boolean) => void;
   giftCode?: string;
   setGiftCode?: (code: string) => void;
   onRedeemGiftCode?: () => void;
+  onDeleteCharacterSuccess?: (updatedCharacters: any[]) => void;
 }
 
 export const Account: React.FC<AccountProps> = ({
@@ -42,6 +43,7 @@ export const Account: React.FC<AccountProps> = ({
   giftCode: propGiftCode,
   setGiftCode: propSetGiftCode,
   onRedeemGiftCode,
+  onDeleteCharacterSuccess,
 }) => {
   // Local state for password change
   const [showPassModalLocal, setShowPassModalLocal] = useState(false);
@@ -50,56 +52,136 @@ export const Account: React.FC<AccountProps> = ({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passLoading, setPassLoading] = useState(false);
 
-  // Local state for gift code fallback
+  // Local state for Gift Code
   const [localGiftCode, setLocalGiftCode] = useState("");
   const giftCode = propGiftCode !== undefined ? propGiftCode : localGiftCode;
   const setGiftCode = propSetGiftCode !== undefined ? propSetGiftCode : setLocalGiftCode;
 
   // Local state for secondary character creation
   const [newCharName, setNewCharName] = useState("");
-  const [newCharVoc, setNewCharVoc] = useState("Elite Knight");
+  const [newCharVoc, setNewCharVoc] = useState("Knight");
   const [newCharGen, setNewCharGen] = useState<"Masculino" | "Feminino">("Masculino");
 
   // Local state for character sell prices
   const [sellPrices, setSellPrices] = useState<Record<string, number>>({});
 
-  const handleChangePasswordSubmit = async () => {
-    if (!newPassword) {
-      showNotification("Nova senha é obrigatória!", "error");
+  // E-mail Confirmation state & modal
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailCodeInput, setEmailCodeInput] = useState("");
+  const [emailLoading, setEmailLoading] = useState(false);
+
+  // Phone Confirmation state
+  const [confirmedPhones, setConfirmedPhones] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem("chapadonia_confirmed_phones");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [phoneInput, setPhoneInput] = useState("");
+  const [showPhoneModal, setShowPhoneModal] = useState(false);
+  const [phoneLoading, setPhoneLoading] = useState(false);
+
+  // Delete Character modal state
+  const [deleteCharModal, setDeleteCharModal] = useState<PlayerCharacter | null>(null);
+  const [confirmDeleteName, setConfirmDeleteName] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Bazaar Listing Modal state
+  const [bazaarModalChar, setBazaarModalChar] = useState<PlayerCharacter | null>(null);
+  const [bazaarRkInput, setBazaarRkInput] = useState("");
+  const [modalPrice, setModalPrice] = useState(100);
+
+  const userKey = userAccount?.name.toLowerCase() || "";
+  const isEmailConfirmed = !!userAccount?.isEmailConfirmed || !!confirmedEmails[userKey];
+  const isPhoneConfirmed = !!userAccount?.isPhoneConfirmed || !!confirmedPhones[userKey];
+  const isRKActive = !!userAccount?.hasRecoveryKey || !!recoveryKeys[userKey];
+  const activeRK = sessionGeneratedKeys[userKey];
+
+  const handlePasswordChangeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPassword || !confirmPassword) {
+      showNotification("Por favor, preencha todos os campos!", "error");
       return;
     }
     if (newPassword !== confirmPassword) {
-      showNotification("As senhas não coincidem!", "error");
+      showNotification("A nova senha e a confirmação não coincidem!", "error");
       return;
     }
 
     setPassLoading(true);
     try {
-      const token = localStorage.getItem("chapadonia_token");
+      const token = localStorage.getItem("chapadonia_token") || sessionStorage.getItem("chapadonia_token");
       const res = await fetch("/api/auth/change-password", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ oldPassword, newPassword })
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ oldPassword, newPassword }),
       });
-
       const data = await res.json();
-      if (res.ok) {
+      if (!res.ok) {
+        showNotification(data.message || "Erro ao alterar senha.", "error");
+      } else {
         showNotification("Senha alterada com sucesso!", "success");
+        setShowPassModalLocal(false);
         setOldPassword("");
         setNewPassword("");
         setConfirmPassword("");
-        setShowPassModalLocal(false);
-      } else {
-        showNotification(data.message || "Erro ao alterar senha.", "error");
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       showNotification("Erro de rede ao alterar senha.", "error");
     } finally {
       setPassLoading(false);
+    }
+  };
+
+  const handleSendConfirmEmail = async () => {
+    setEmailLoading(true);
+    try {
+      const token = localStorage.getItem("chapadonia_token") || sessionStorage.getItem("chapadonia_token");
+      const res = await fetch("/api/auth/send-confirm-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showNotification(data.message || "Erro ao enviar e-mail de confirmação.", "error");
+      } else {
+        showNotification(data.message, "success");
+      }
+    } catch {
+      showNotification("Erro de rede ao enviar e-mail.", "error");
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  const handleVerifyEmailCodeSubmit = async () => {
+    if (!emailCodeInput.trim() || emailCodeInput.trim().length !== 6) {
+      showNotification("Digite o código de 6 dígitos enviado para seu e-mail!", "error");
+      return;
+    }
+    setEmailLoading(true);
+    try {
+      const token = localStorage.getItem("chapadonia_token") || sessionStorage.getItem("chapadonia_token");
+      const res = await fetch("/api/auth/confirm-email-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ code: emailCodeInput.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showNotification(data.message || "Erro ao verificar código.", "error");
+      } else {
+        showNotification("E-mail verificado e confirmado com sucesso!", "success");
+        setShowEmailModal(false);
+        setEmailCodeInput("");
+        onConfirmEmail();
+      }
+    } catch {
+      showNotification("Erro de rede ao verificar e-mail.", "error");
+    } finally {
+      setEmailLoading(false);
     }
   };
 
@@ -116,15 +198,101 @@ export const Account: React.FC<AccountProps> = ({
     }
   };
 
+  const handleConfirmPhoneSubmit = async () => {
+    if (!phoneInput.trim() || phoneInput.trim().length < 8) {
+      showNotification("Por favor, digite um número de celular válido com DDD!", "error");
+      return;
+    }
+    setPhoneLoading(true);
+    try {
+      const token = localStorage.getItem("chapadonia_token") || sessionStorage.getItem("chapadonia_token");
+      const res = await fetch("/api/auth/confirm-phone", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ phone: phoneInput.trim() })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showNotification(data.message || "Erro ao confirmar celular.", "error");
+      } else {
+        showNotification("Celular confirmado com sucesso!", "success");
+        const updated = { ...confirmedPhones, [userKey]: true };
+        setConfirmedPhones(updated);
+        localStorage.setItem("chapadonia_confirmed_phones", JSON.stringify(updated));
+        setShowPhoneModal(false);
+        setPhoneInput("");
+      }
+    } catch {
+      showNotification("Erro de rede ao confirmar celular.", "error");
+    } finally {
+      setPhoneLoading(false);
+    }
+  };
+
   const handleSellPriceChange = (charName: string, delta: number) => {
     const currentPrice = sellPrices[charName] || 100;
     const nextPrice = Math.max(50, currentPrice + delta);
     setSellPrices({ ...sellPrices, [charName]: nextPrice });
   };
 
-  const handleCharacterSell = (char: PlayerCharacter) => {
+  const handleOpenBazaarModal = (char: PlayerCharacter) => {
     const price = sellPrices[char.name] || 100;
-    onListCharacterOnBazaar(char, price);
+    setModalPrice(price);
+    setBazaarModalChar(char);
+    setBazaarRkInput("");
+  };
+
+  const handleBazaarSubmit = () => {
+    if (!bazaarModalChar) return;
+    if (!isEmailConfirmed) {
+      showNotification("Você precisa confirmar seu E-mail antes de anunciar um personagem no Bazar!", "error");
+      return;
+    }
+    if (!isPhoneConfirmed) {
+      showNotification("Você precisa confirmar seu Celular antes de anunciar um personagem no Bazar!", "error");
+      return;
+    }
+    if (!isRKActive || !bazaarRkInput.trim()) {
+      showNotification("Você precisa digitar sua Recovery Key (RK) para autorizar o anúncio!", "error");
+      return;
+    }
+
+    onListCharacterOnBazaar(bazaarModalChar, modalPrice, bazaarRkInput, isEmailConfirmed, isPhoneConfirmed);
+    setBazaarModalChar(null);
+    setBazaarRkInput("");
+  };
+
+  const handleDeleteCharSubmit = async () => {
+    if (!deleteCharModal) return;
+    if (confirmDeleteName !== deleteCharModal.name) {
+      showNotification("O nome digitado não coincide com o nome do personagem!", "error");
+      return;
+    }
+
+    setDeleteLoading(true);
+    try {
+      const token = localStorage.getItem("chapadonia_token") || sessionStorage.getItem("chapadonia_token");
+      const res = await fetch("/api/auth/delete-character", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ characterId: (deleteCharModal as any).id, characterName: deleteCharModal.name }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showNotification(data.message || "Erro ao deletar personagem.", "error");
+      } else {
+        showNotification(data.message, "success");
+        setDeleteCharModal(null);
+        setConfirmDeleteName("");
+        if (onDeleteCharacterSuccess) {
+          onDeleteCharacterSuccess(data.characters);
+        }
+      }
+    } catch {
+      showNotification("Erro de rede ao deletar personagem.", "error");
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   const handleCreateCharSubmit = async () => {
@@ -138,13 +306,8 @@ export const Account: React.FC<AccountProps> = ({
     }
   };
 
-  const userKey = userAccount?.name.toLowerCase() || "";
-  const isEmailConfirmed = confirmedEmails[userKey];
-  const isRKActive = recoveryKeys[userKey];
-  const activeRK = sessionGeneratedKeys[userKey];
-
   return (
-    <div className="bg-[#0b1528]/95 backdrop-blur-md border border-sky-500/30 rounded-2xl p-5 md:p-6 text-white space-y-6 shadow-2xl -m-4 md:-m-6 min-h-[500px]">
+    <div className="bg-[#0b1528]/95 backdrop-blur-md border border-sky-500/30 rounded-2xl p-5 md:p-6 text-white space-y-6 shadow-2xl min-h-[500px]">
       
       {/* HEADER DA PÁGINA */}
       <div className="border-b border-sky-500/20 pb-3 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -154,7 +317,7 @@ export const Account: React.FC<AccountProps> = ({
             MINHA CONTA
           </h2>
           <p className="text-xs text-sky-200/80 font-mono mt-1">
-            Bem-vindo, <strong className="text-sky-300 font-extrabold">{userAccount?.name}</strong>! Gerencie personagens, segurança e moedas.
+            Bem-vindo, <strong className="text-sky-300 font-extrabold">{userAccount?.name}</strong>! Gerencie seus personagens, moedas e segurança.
           </p>
         </div>
         <button 
@@ -165,64 +328,105 @@ export const Account: React.FC<AccountProps> = ({
         </button>
       </div>
 
-      {/* STATS DA CONTA */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Email Widget */}
-        <div className="bg-[#0c1930] border border-sky-500/20 p-4 rounded-xl flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-sky-500/10 border border-sky-500/20 flex items-center justify-center shrink-0">
-            <Users className="w-5 h-5 text-sky-400" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <span className="text-[10px] text-sky-400/80 uppercase font-bold font-mono block">E-mail</span>
-            <h4 className="text-xs font-extrabold text-white font-serif truncate" title={userAccount?.email}>
-              {userAccount?.email}
-            </h4>
-            <div className="mt-1 flex items-center gap-1.5">
-              {isEmailConfirmed ? (
-                <span className="text-[9px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded font-bold font-mono uppercase flex items-center gap-0.5">
-                  ✓ Confirmado
-                </span>
-              ) : (
-                <button 
-                  onClick={onConfirmEmail}
-                  className="text-[8px] whitespace-nowrap text-red-400 hover:text-white bg-red-500/10 hover:bg-red-600/30 border border-red-500/30 px-1.5 py-0.5 rounded font-bold font-mono uppercase cursor-pointer transition-colors"
-                >
-                  ⚠ Confirmar E-mail
-                </button>
-              )}
+      {/* STATS DA CONTA (2 COLUNAS ESPAÇOSAS - SEM CORTES OU VAZAMENTOS) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        
+        {/* Email Card */}
+        <div className="bg-gradient-to-b from-[#0e1d38] to-[#081224] border border-sky-500/25 hover:border-sky-400/50 p-4 rounded-xl shadow-xl flex flex-col justify-between relative overflow-hidden group transition-all min-h-[105px]">
+          <div className="flex items-start justify-between gap-3">
+            <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0 shadow-inner group-hover:scale-105 transition-transform">
+              <Users className="w-5 h-5" />
             </div>
+            {isEmailConfirmed ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold font-mono px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Confirmado
+              </span>
+            ) : (
+              <button
+                onClick={() => setShowEmailModal(true)}
+                className="inline-flex items-center gap-1 text-[11px] font-extrabold font-mono px-3 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 hover:text-white cursor-pointer transition-all shadow shrink-0"
+              >
+                <ShieldAlert className="w-3.5 h-3.5 text-red-400" /> Confirmar E-mail
+              </button>
+            )}
           </div>
-        </div>
-
-        {/* Chapa Coins Widget */}
-        <div className="bg-[#0c1930] border border-sky-500/20 p-4 rounded-xl flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-            <Coins className="w-5 h-5 text-amber-400 animate-pulse" />
-          </div>
-          <div className="min-w-0">
-            <span className="text-[10px] text-sky-400/80 uppercase font-bold font-mono block">Saldo da Loja</span>
-            <h4 className="text-xs font-extrabold text-amber-400 font-mono flex items-center gap-1 whitespace-nowrap">
-              🪙 {coins} Coins
+          <div className="mt-3 min-w-0">
+            <span className="text-[10px] text-sky-400/70 font-mono uppercase tracking-wider font-bold block mb-0.5">E-mail Cadastrado</span>
+            <h4 className="text-xs sm:text-sm font-extrabold text-white font-mono truncate" title={userAccount?.email}>
+              {userAccount?.email || "—"}
             </h4>
           </div>
         </div>
 
-        {/* Security Widget */}
-        <div className="bg-[#0c1930] border border-sky-500/20 p-4 rounded-xl flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+        {/* Celular Card */}
+        <div className="bg-gradient-to-b from-[#0e1d38] to-[#081224] border border-sky-500/25 hover:border-sky-400/50 p-4 rounded-xl shadow-xl flex flex-col justify-between relative overflow-hidden group transition-all min-h-[105px]">
+          <div className="flex items-start justify-between gap-3">
+            <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0 shadow-inner group-hover:scale-105 transition-transform">
+              <Smartphone className="w-5 h-5" />
+            </div>
+            {isPhoneConfirmed ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold font-mono px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Confirmado
+              </span>
+            ) : (
+              <button
+                onClick={() => setShowPhoneModal(true)}
+                className="inline-flex items-center gap-1 text-[11px] font-extrabold font-mono px-3 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 hover:text-white cursor-pointer transition-all shadow shrink-0"
+              >
+                <ShieldAlert className="w-3.5 h-3.5 text-red-400" /> Cadastrar Celular
+              </button>
+            )}
           </div>
-          <div>
-            <span className="text-[10px] text-sky-400/80 uppercase font-bold font-mono block">Segurança RK</span>
-            <h4 className="text-xs font-extrabold font-serif mt-0.5">
-              {isRKActive ? (
-                <span className="text-emerald-400 font-bold">✓ RK Ativa</span>
-              ) : (
-                <span className="text-rose-400 font-bold">⚠ RK Pendente</span>
-              )}
+          <div className="mt-3 min-w-0">
+            <span className="text-[10px] text-sky-400/70 font-mono uppercase tracking-wider font-bold block mb-0.5">Celular de Segurança</span>
+            <h4 className="text-xs sm:text-sm font-extrabold text-white font-mono truncate" title={userAccount?.phone || "Não Cadastrado"}>
+              {userAccount?.phone || "Não Cadastrado"}
             </h4>
           </div>
         </div>
+
+        {/* Chapa Coins Card */}
+        <div className="bg-gradient-to-b from-[#0e1d38] to-[#081224] border border-amber-500/25 hover:border-amber-400/50 p-4 rounded-xl shadow-xl flex flex-col justify-between relative overflow-hidden group transition-all min-h-[105px]">
+          <div className="flex items-start justify-between gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 shadow-inner group-hover:scale-105 transition-transform">
+              <Coins className="w-5 h-5 animate-pulse" />
+            </div>
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold font-mono px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 shrink-0">
+              🪙 Loja do Site
+            </span>
+          </div>
+          <div className="mt-3 min-w-0">
+            <span className="text-[10px] text-amber-400/70 font-mono uppercase tracking-wider font-bold block mb-0.5">Saldo em Coins</span>
+            <h4 className="text-base sm:text-lg font-extrabold text-amber-400 font-mono truncate">
+              {coins.toLocaleString("pt-BR")} <span className="text-xs text-amber-400/80 uppercase font-sans font-bold">Coins</span>
+            </h4>
+          </div>
+        </div>
+
+        {/* RK Card */}
+        <div className="bg-gradient-to-b from-[#0e1d38] to-[#081224] border border-sky-500/25 hover:border-sky-400/50 p-4 rounded-xl shadow-xl flex flex-col justify-between relative overflow-hidden group transition-all min-h-[105px]">
+          <div className="flex items-start justify-between gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 shadow-inner group-hover:scale-105 transition-transform">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            {isRKActive ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold font-mono px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> RK Protegida
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold font-mono px-3 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-400 shrink-0">
+                ⚠ RK Pendente
+              </span>
+            )}
+          </div>
+          <div className="mt-3 min-w-0">
+            <span className="text-[10px] text-sky-400/70 font-mono uppercase tracking-wider font-bold block mb-0.5">Recovery Key (RK)</span>
+            <h4 className="text-xs sm:text-sm font-extrabold text-white font-mono truncate">
+              {isRKActive ? "✓ Chave Ativada" : "⚠ Requer E-mail Confirmado"}
+            </h4>
+          </div>
+        </div>
+
       </div>
 
       {/* CONTEÚDO PRINCIPAL (GRID 2 COLUNAS) */}
@@ -233,53 +437,52 @@ export const Account: React.FC<AccountProps> = ({
           
           {/* Meus Personagens */}
           <div className="bg-[#0c1930] border border-sky-500/20 p-5 rounded-xl space-y-4 shadow-lg">
-            <span className="text-xs font-bold text-sky-300 uppercase tracking-wider block font-serif border-b border-sky-500/10 pb-2 flex items-center gap-1.5">
-              👥 Personagens da Conta
+            <span className="text-xs font-bold text-sky-300 uppercase tracking-wider block font-serif border-b border-sky-500/10 pb-2 flex items-center justify-between">
+              <span>🗡️ Meus Personagens ({myCharacters.length})</span>
             </span>
-            
-            {userAccount && (!isEmailConfirmed || !isRKActive) && (
-              <div className="bg-[#080f1e] border border-sky-500/20 rounded-lg p-3.5 text-[11px] text-sky-100 leading-relaxed space-y-1.5 shadow-inner">
-                <p className="font-extrabold flex items-center gap-1.5 text-amber-300">
-                  <span>🔒 Requisitos para Vender no Bazar:</span>
-                </p>
-                <ul className="list-disc pl-4 space-y-1 font-mono text-[10px]">
-                  <li className={isEmailConfirmed ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}>
-                    {isEmailConfirmed ? "✓ E-mail confirmado" : "✗ Confirmar e-mail da conta (no topo)"}
-                  </li>
-                  <li className={isRKActive ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}>
-                    {isRKActive ? "✓ Recovery Key ativa" : "✗ Gerar Recovery Key (no bloco ao lado)"}
-                  </li>
-                </ul>
-              </div>
-            )}
-            
-            <div className="space-y-3">
+
+            <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
               {myCharacters.length === 0 ? (
-                <p className="text-center text-xs text-sky-200/60 font-mono py-4">Nenhum personagem na conta.</p>
+                <p className="text-xs text-sky-200/60 font-serif italic py-4 text-center">
+                  Você ainda não possui personagens nesta conta. Crie o seu primeiro herói abaixo!
+                </p>
               ) : (
                 myCharacters.map((char) => {
                   const currentPrice = sellPrices[char.name] || 100;
                   return (
-                    <div key={char.name} className="bg-[#080f1e]/40 border border-sky-500/10 rounded-xl p-4 flex flex-col gap-3 hover:border-sky-500/30 transition-all duration-200">
-                      {/* Info Básica */}
-                      <div className="flex items-center gap-3">
-                        <div className="w-16 h-16 bg-[#080f1e] rounded-xl border border-amber-500/40 flex items-center justify-center overflow-hidden shadow-inner relative shrink-0 p-1">
-                          <img 
-                            src={getOutfitImage(char.looktype || 128)} 
-                            alt="" 
-                            className="max-w-full max-h-full object-contain filter drop-shadow-md" 
-                            referrerPolicy="no-referrer"
-                          />
+                    <div 
+                      key={char.name}
+                      className="bg-[#080f1e] border border-sky-500/20 p-3.5 rounded-xl flex flex-col gap-3 shadow-inner hover:border-sky-500/40 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-[#0d1b32] rounded-lg border border-sky-500/20 flex items-center justify-center p-1 shrink-0">
+                            <img 
+                              src={getOutfitImage(char.looktype || 128)} 
+                              alt={char.name} 
+                              className="max-w-full max-h-full object-contain filter drop-shadow-md" 
+                              referrerPolicy="no-referrer"
+                            />
+                          </div>
+                          <div>
+                            <h4 className="font-extrabold text-white text-sm flex items-center gap-1.5">
+                              {char.name}
+                              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                            </h4>
+                            <p className="text-[11px] text-sky-200/80 font-mono mt-0.5">
+                              Level {char.level} — <span className="font-sans font-bold text-amber-300">{char.vocation}</span>
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="font-extrabold text-white text-sm flex items-center gap-1.5">
-                            {char.name}
-                            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                          </h4>
-                          <p className="text-[11px] text-sky-200/80 font-mono mt-0.5">
-                            Level {char.level} — <span className="font-sans font-bold text-amber-300">{char.vocation}</span>
-                          </p>
-                        </div>
+
+                        {/* Botão de Excluir Personagem */}
+                        <button
+                          onClick={() => { setDeleteCharModal(char); setConfirmDeleteName(""); }}
+                          className="bg-red-500/10 hover:bg-red-600/30 text-red-400 hover:text-white p-2 rounded-lg border border-red-500/20 cursor-pointer transition-colors"
+                          title="Deletar Personagem"
+                        >
+                          <Trash className="w-4 h-4" />
+                        </button>
                       </div>
 
                       {/* Configuração de Venda do Bazar */}
@@ -332,9 +535,10 @@ export const Account: React.FC<AccountProps> = ({
                           </div>
                         </div>
                         <button 
-                          onClick={() => handleCharacterSell(char)}
-                          className="w-full bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-[10px] h-8 rounded-lg shadow cursor-pointer transition-all uppercase tracking-wider font-mono flex items-center justify-center border border-sky-500/30"
+                          onClick={() => handleOpenBazaarModal(char)}
+                          className="w-full bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-[10px] h-8 rounded-lg shadow cursor-pointer transition-all uppercase tracking-wider font-mono flex items-center justify-center border border-sky-500/30 gap-1.5"
                         >
+                          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                           Anunciar no Bazar de Personagens
                         </button>
                       </div>
@@ -371,11 +575,11 @@ export const Account: React.FC<AccountProps> = ({
                     onChange={(e) => setNewCharVoc(e.target.value)}
                     className="w-full bg-[#080f1e] border border-sky-500/20 rounded-lg px-3 py-2 text-xs text-sky-300 focus:outline-none focus:border-sky-400 cursor-pointer"
                   >
-                    <option value="Elite Knight">Knight</option>
-                    <option value="Master Sorcerer">Sorcerer</option>
-                    <option value="Royal Paladin">Paladin</option>
-                    <option value="Elder Druid">Druid</option>
-                    <option value="Exalted Monk">Monk</option>
+                    <option value="Knight">Knight</option>
+                    <option value="Sorcerer">Sorcerer</option>
+                    <option value="Paladin">Paladin</option>
+                    <option value="Druid">Druid</option>
+                    <option value="Monk">Monk</option>
                   </select>
                 </div>
 
@@ -462,10 +666,10 @@ export const Account: React.FC<AccountProps> = ({
             <div className="space-y-3">
               {isRKActive ? (
                 activeRK ? (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <span className="text-[10px] uppercase font-bold text-sky-400 block font-mono">Sua Recovery Key Gerada:</span>
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-[#080f1e] border border-sky-500/30 py-2.5 px-3 rounded-lg font-mono text-center text-sm tracking-wider font-extrabold text-amber-400 select-all [text-shadow:1px_1px_0_#000]">
+                      <div className="flex-1 bg-[#080f1e] border border-amber-500/50 py-2.5 px-3 rounded-lg font-mono text-center text-sm tracking-wider font-extrabold text-amber-400 select-all shadow-inner">
                         {activeRK}
                       </div>
                       <button
@@ -479,34 +683,54 @@ export const Account: React.FC<AccountProps> = ({
                         <Copy className="w-4 h-4" />
                       </button>
                     </div>
-                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-[11px] text-amber-200 leading-relaxed flex items-start gap-2 shadow-sm">
-                      <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                      <span className="font-serif">
-                        Esta chave já foi gerada e está vinculada à sua conta. Guarde-a em um local seguro de sua casa. <strong className="text-white">Ela só pode ser gerada uma única vez!</strong>
-                      </span>
+                    <div className="bg-amber-500/15 border border-amber-500/30 rounded-lg p-3 text-[11px] text-amber-200 leading-relaxed flex items-start gap-2 shadow-sm">
+                      <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="font-serif font-bold text-amber-300">
+                          ⚠️ ATENÇÃO: ENVIADA PARA SEU E-MAIL!
+                        </p>
+                        <p className="text-[10px] text-amber-200/90 font-sans">
+                          Sua RK foi exibida na tela e também enviada com segurança para o e-mail cadastrado (<strong className="text-white">{userAccount?.email}</strong>).
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 text-[11px] text-emerald-200 font-bold leading-relaxed flex items-start gap-2 shadow-sm">
-                    <BadgeCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5 animate-pulse" />
-                    <span className="font-serif">
-                      Sua conta possui uma <strong className="text-emerald-300">Recovery Key</strong> ativa e protegida contra invasões. Por motivos de segurança, ela não pode ser exibida novamente.
-                    </span>
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3.5 text-xs text-emerald-200 font-medium leading-relaxed flex items-start gap-2.5 shadow-sm">
+                    <BadgeCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5 animate-pulse" />
+                    <div className="space-y-1">
+                      <p className="font-serif font-bold text-emerald-300">
+                        ✓ Recovery Key (RK) Ativa e Protegida
+                      </p>
+                      <p className="text-[11px] font-sans text-emerald-200/90">
+                        Sua conta possui uma Recovery Key ativa. Ela foi enviada para o seu e-mail de cadastro verificado e não fica visível publicamente.
+                      </p>
+                    </div>
                   </div>
                 )
               ) : (
                 <div className="space-y-3">
-                  <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-[11px] text-red-200 leading-relaxed flex items-start gap-2 shadow-sm">
-                    <ShieldAlert className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                    <span className="font-serif">
-                      Sua conta ainda não possui uma <strong className="text-red-300">Recovery Key</strong> gerada. Recomendamos fortemente a criação desta chave agora para garantir a segurança da sua conta e poder vender no Bazar.
-                    </span>
-                  </div>
+                  {!isEmailConfirmed ? (
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-[11px] text-amber-200 leading-relaxed flex items-start gap-2 shadow-sm">
+                      <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <span className="font-serif">
+                        Você precisa <strong className="text-amber-300">confirmar seu e-mail</strong> antes de poder gerar a sua Recovery Key (RK)!
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-[11px] text-red-200 leading-relaxed flex items-start gap-2 shadow-sm">
+                      <ShieldAlert className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                      <span className="font-serif">
+                        Sua conta ainda não possui uma <strong className="text-red-300">Recovery Key</strong> gerada. Gere sua chave para poder vender personagens no Bazar.
+                      </span>
+                    </div>
+                  )}
                   <button
                     onClick={onGenerateRK}
-                    className="w-full bg-gradient-to-b from-sky-400 to-sky-600 hover:from-sky-300 hover:to-sky-500 text-black font-extrabold text-xs py-2.5 px-4 rounded shadow-md cursor-pointer transition-all uppercase tracking-wider font-serif flex items-center justify-center gap-1.5 border border-sky-500/30"
+                    disabled={!isEmailConfirmed}
+                    className="w-full bg-gradient-to-b from-sky-400 to-sky-600 hover:from-sky-300 hover:to-sky-500 disabled:opacity-50 text-black font-extrabold text-xs py-2.5 px-4 rounded shadow-md cursor-pointer disabled:cursor-not-allowed transition-all uppercase tracking-wider font-serif flex items-center justify-center gap-1.5 border border-sky-500/30"
                   >
-                    🗝️ Gerar Recovery Key (Única Vez)
+                    🗝️ Gerar Recovery Key (Envia para E-mail)
                   </button>
                 </div>
               )}
@@ -517,16 +741,84 @@ export const Account: React.FC<AccountProps> = ({
 
       </div>
 
-      {/* LOCAL CHANGE PASSWORD MODAL */}
+      {/* MODAL CONFIRMAR E-MAIL (COM CÓDIGO DE 6 DÍGITOS VIA SMTP) */}
+      {showEmailModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
+          <div className="bg-[#0c1930] border-2 border-sky-500/40 p-6 rounded-xl max-w-sm w-full space-y-4 shadow-2xl relative text-white">
+            <h3 className="text-lg font-extrabold text-white font-serif border-b border-sky-500/20 pb-2 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Mail className="w-5 h-5 text-sky-400" />
+                CONFIRMAÇÃO DE E-MAIL
+              </span>
+              <button onClick={() => setShowEmailModal(false)} className="text-sky-400 hover:text-white cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </h3>
+
+            <p className="text-xs text-sky-200/80 leading-relaxed font-serif">
+              Enviaremos um código de verificação de 6 dígitos para o e-mail: <strong className="text-white font-mono">{userAccount?.email}</strong>.
+            </p>
+
+            <div className="space-y-3 text-xs">
+              <button
+                type="button"
+                onClick={handleSendConfirmEmail}
+                disabled={emailLoading}
+                className="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs py-2 px-3 rounded-lg border border-sky-500/30 cursor-pointer uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
+              >
+                <Mail className="w-4 h-4" />
+                {emailLoading ? "Enviando E-mail..." : "Enviar Código para meu E-mail"}
+              </button>
+
+              <div className="border-t border-sky-500/10 pt-3 space-y-2">
+                <label className="block text-sky-200/80 font-serif text-[11px] font-bold">Digite o Código de 6 Dígitos recebido:</label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  placeholder="Ex: 123456"
+                  value={emailCodeInput}
+                  onChange={(e) => setEmailCodeInput(e.target.value)}
+                  className="w-full bg-[#080f1e] border border-sky-500/30 rounded-lg px-3 py-2 text-center text-sm font-mono tracking-widest text-amber-400 font-extrabold focus:outline-none focus:border-sky-400 shadow-inner"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEmailModal(false)}
+                  className="flex-1 bg-[#080f1e] hover:bg-sky-500/10 text-sky-300 font-bold text-xs py-2.5 rounded-lg border border-sky-500/20 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleVerifyEmailCodeSubmit}
+                  disabled={emailLoading || emailCodeInput.length !== 6}
+                  className="flex-1 bg-gradient-to-b from-sky-400 to-sky-600 hover:from-sky-300 hover:to-sky-500 disabled:opacity-50 text-black font-extrabold text-xs py-2.5 rounded-lg border border-sky-500/30 cursor-pointer uppercase tracking-wider"
+                >
+                  Confirmar E-mail
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ALTERAR SENHA */}
       {showPassModalLocal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
           <div className="bg-[#0c1930] border-2 border-sky-500/40 p-6 rounded-xl max-w-sm w-full space-y-4 shadow-2xl relative text-white">
-            <h3 className="text-lg font-extrabold text-white font-serif border-b border-sky-500/20 pb-2 flex items-center gap-2">
-              <KeyRound className="w-5 h-5 text-sky-400" />
-              ALTERAR SENHA
+            <h3 className="text-lg font-extrabold text-white font-serif border-b border-sky-500/20 pb-2 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <KeyRound className="w-5 h-5 text-sky-400" />
+                ALTERAR SENHA
+              </span>
+              <button onClick={() => setShowPassModalLocal(false)} className="text-sky-400 hover:text-white cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
             </h3>
 
-            <div className="space-y-3 text-xs">
+            <form onSubmit={handlePasswordChangeSubmit} className="space-y-3 text-xs">
               <div>
                 <label className="block text-sky-200/80 mb-1 font-serif text-[11px] font-bold">Senha Atual</label>
                 <input
@@ -542,7 +834,7 @@ export const Account: React.FC<AccountProps> = ({
                 <label className="block text-sky-200/80 mb-1 font-serif text-[11px] font-bold">Nova Senha</label>
                 <input
                   type="password"
-                  placeholder="Nova senha secreta"
+                  placeholder="Mínimo 6 caracteres"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="w-full bg-[#080f1e] border border-sky-500/20 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-400 font-mono shadow-inner"
@@ -553,29 +845,234 @@ export const Account: React.FC<AccountProps> = ({
                 <label className="block text-sky-200/80 mb-1 font-serif text-[11px] font-bold">Confirmar Nova Senha</label>
                 <input
                   type="password"
-                  placeholder="Repita a nova senha"
+                  placeholder="Digite a nova senha novamente"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="w-full bg-[#080f1e] border border-sky-500/20 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-400 font-mono shadow-inner"
                 />
               </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPassModalLocal(false)}
+                  className="flex-1 bg-[#080f1e] hover:bg-sky-500/10 text-sky-300 font-bold text-xs py-2.5 rounded-lg border border-sky-500/20 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={passLoading}
+                  className="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-xs py-2.5 rounded-lg border border-sky-500/30 cursor-pointer uppercase tracking-wider"
+                >
+                  {passLoading ? "Salvando..." : "Salvar Senha"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CONFIRMAR CELULAR */}
+      {showPhoneModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
+          <div className="bg-[#0c1930] border-2 border-sky-500/40 p-6 rounded-xl max-w-sm w-full space-y-4 shadow-2xl relative text-white">
+            <h3 className="text-lg font-extrabold text-white font-serif border-b border-sky-500/20 pb-2 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Smartphone className="w-5 h-5 text-sky-400" />
+                CONFIRMAR CELULAR
+              </span>
+              <button onClick={() => setShowPhoneModal(false)} className="text-sky-400 hover:text-white cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </h3>
+
+            <p className="text-xs text-sky-200/80 leading-relaxed font-serif">
+              Insira o número do seu celular com DDD para vinculá-lo e confirmá-lo na sua conta. Esta confirmação é obrigatória para realizar vendas no Bazar.
+            </p>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-sky-200/80 mb-1 font-serif text-[11px] font-bold">Número de Celular com DDD</label>
+                <input
+                  type="text"
+                  placeholder="Ex: (11) 99999-9999"
+                  value={phoneInput}
+                  onChange={(e) => setPhoneInput(e.target.value)}
+                  className="w-full bg-[#080f1e] border border-sky-500/20 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-400 font-mono shadow-inner"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPhoneModal(false)}
+                  className="flex-1 bg-[#080f1e] hover:bg-sky-500/10 text-sky-300 font-bold text-xs py-2.5 rounded-lg border border-sky-500/20 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmPhoneSubmit}
+                  disabled={phoneLoading}
+                  className="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-xs py-2.5 rounded-lg border border-sky-500/30 cursor-pointer uppercase tracking-wider"
+                >
+                  {phoneLoading ? "Salvando..." : "Confirmar Celular"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DELETAR PERSONAGEM */}
+      {deleteCharModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
+          <div className="bg-[#0c1930] border-2 border-red-500/40 p-6 rounded-xl max-w-sm w-full space-y-4 shadow-2xl relative text-white">
+            <h3 className="text-lg font-extrabold text-red-400 font-serif border-b border-red-500/20 pb-2 flex items-center gap-2">
+              <Trash className="w-5 h-5 text-red-500" />
+              DELETAR PERSONAGEM
+            </h3>
+
+            <div className="bg-red-500/10 border border-red-500/20 p-3 rounded-lg text-xs text-red-200 space-y-1">
+              <p className="font-serif font-bold text-red-300">⚠️ ATENÇÃO: Esta ação é irreversível!</p>
+              <p className="text-[11px] text-red-200/80 leading-relaxed">
+                Você está prestes a apagar permanentemente o personagem <strong className="text-white font-bold">{deleteCharModal.name}</strong> (Level {deleteCharModal.level}).
+              </p>
             </div>
 
-            <div className="flex items-center gap-3 pt-2">
+            <div className="space-y-1">
+              <label className="block text-sky-200/80 font-serif text-xs font-bold">
+                Digite "<span className="text-white font-mono">{deleteCharModal.name}</span>" para confirmar:
+              </label>
+              <input 
+                type="text"
+                placeholder={deleteCharModal.name}
+                value={confirmDeleteName}
+                onChange={(e) => setConfirmDeleteName(e.target.value)}
+                className="w-full bg-[#080f1e] border border-red-500/30 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-red-400"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2">
               <button
-                type="button"
-                onClick={() => setShowPassModalLocal(false)}
-                className="flex-1 bg-transparent hover:bg-white/5 text-sky-300 font-bold py-2 rounded-lg text-xs cursor-pointer border border-sky-500/20 transition-colors"
+                onClick={() => { setDeleteCharModal(null); setConfirmDeleteName(""); }}
+                className="flex-1 bg-[#080f1e] hover:bg-sky-500/10 text-sky-300 font-bold text-xs py-2.5 rounded-lg border border-sky-500/20 cursor-pointer"
               >
                 Cancelar
               </button>
               <button
-                type="button"
-                onClick={handleChangePasswordSubmit}
-                disabled={passLoading}
-                className="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-bold py-2 rounded-lg text-xs cursor-pointer transition-colors shadow flex items-center justify-center gap-1.5 border border-sky-500/30"
+                onClick={handleDeleteCharSubmit}
+                disabled={confirmDeleteName !== deleteCharModal.name || deleteLoading}
+                className="flex-1 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-extrabold text-xs py-2.5 rounded-lg border border-red-500/30 cursor-pointer uppercase tracking-wider"
               >
-                {passLoading ? "Salvando..." : "Salvar Senha"}
+                {deleteLoading ? "Excluindo..." : "Confirmar Exclusão"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ANUNCIAR NO BAZAR (COM REQUISITOS E RECOVERY KEY) */}
+      {bazaarModalChar && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
+          <div className="bg-[#0c1930] border-2 border-sky-500/40 p-6 rounded-xl max-w-md w-full space-y-4 shadow-2xl relative text-white">
+            <h3 className="text-lg font-extrabold text-white font-serif border-b border-sky-500/20 pb-2 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-amber-400" />
+                ANUNCIAR NO BAZAR DE PERSONAGENS
+              </span>
+              <button onClick={() => setBazaarModalChar(null)} className="text-sky-400 hover:text-white cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </h3>
+
+            <div className="bg-[#080f1e] p-3 rounded-lg border border-sky-500/20 flex items-center gap-3">
+              <div className="w-10 h-10 bg-[#0d1b32] rounded-lg border border-sky-500/20 flex items-center justify-center p-1 shrink-0">
+                <img src={getOutfitImage(bazaarModalChar.looktype || 128)} alt="" className="max-w-full max-h-full object-contain" />
+              </div>
+              <div>
+                <h4 className="text-sm font-extrabold text-white">{bazaarModalChar.name}</h4>
+                <p className="text-xs text-sky-300 font-mono">Level {bazaarModalChar.level} — {bazaarModalChar.vocation}</p>
+              </div>
+            </div>
+
+            {/* CHECKLIST DE REQUISITOS OBRIGATÓRIOS */}
+            <div className="space-y-2 bg-[#080f1e]/80 p-3 rounded-lg border border-sky-500/10 text-xs">
+              <span className="font-serif font-bold text-sky-300 block mb-1 uppercase tracking-wider text-[10px]">Requisitos de Segurança Obrigatórios:</span>
+              <div className="flex items-center justify-between text-[11px]">
+                <span>1. E-mail de cadastro confirmado:</span>
+                {isEmailConfirmed ? (
+                  <span className="text-emerald-400 font-bold font-mono">✓ Confirmado</span>
+                ) : (
+                  <span className="text-red-400 font-bold font-mono">⚠ Não Confirmado</span>
+                )}
+              </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span>2. Celular com DDD confirmado:</span>
+                {isPhoneConfirmed ? (
+                  <span className="text-emerald-400 font-bold font-mono">✓ Confirmado</span>
+                ) : (
+                  <span className="text-red-400 font-bold font-mono">⚠ Não Confirmado</span>
+                )}
+              </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span>3. Chave de Recuperação (RK) ativa:</span>
+                {isRKActive ? (
+                  <span className="text-emerald-400 font-bold font-mono">✓ RK Ativa</span>
+                ) : (
+                  <span className="text-red-400 font-bold font-mono">⚠ RK Pendente</span>
+                )}
+              </div>
+            </div>
+
+            {/* PREÇO E AVISO DA TAXA DE 10% */}
+            <div className="space-y-2">
+              <label className="block text-sky-200/80 font-serif text-xs font-bold">Preço de Venda (Mínimo: 50 Coins)</label>
+              <input 
+                type="number"
+                min="50"
+                value={modalPrice}
+                onChange={(e) => setModalPrice(Math.max(50, parseInt(e.target.value) || 50))}
+                className="w-full bg-[#080f1e] border border-sky-500/20 rounded-lg px-3 py-2 text-sm text-amber-400 font-mono font-extrabold focus:outline-none focus:border-sky-400"
+              />
+
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-[11px] text-amber-200 space-y-1">
+                <p className="font-serif font-bold text-amber-300 flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                  Taxa de Anúncio do Bazar (10%): {Math.ceil(modalPrice * 0.1)} Coins
+                </p>
+                <p className="text-[10px] text-amber-200/90 leading-relaxed font-sans">
+                  É cobrada uma taxa administrativa de <strong>10% ({Math.ceil(modalPrice * 0.1)} Coins)</strong> debitada do seu saldo no momento do anúncio.
+                </p>
+              </div>
+            </div>
+
+            {/* AUTENTICAÇÃO COM RECOVERY KEY */}
+            <div className="space-y-1">
+              <label className="block text-sky-200/80 font-serif text-xs font-bold">Digite sua Recovery Key (RK) para autorizar:</label>
+              <input 
+                type="text"
+                placeholder="Ex: XXXX-YYYY-ZZZZ-WWWW"
+                value={bazaarRkInput}
+                onChange={(e) => setBazaarRkInput(e.target.value)}
+                className="w-full bg-[#080f1e] border border-amber-500/30 rounded-lg px-3 py-2 text-xs text-amber-300 font-mono uppercase focus:outline-none focus:border-amber-400 shadow-inner"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => setBazaarModalChar(null)}
+                className="flex-1 bg-[#080f1e] hover:bg-sky-500/10 text-sky-300 font-bold text-xs py-2.5 rounded-lg border border-sky-500/20 cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleBazaarSubmit}
+                disabled={!isEmailConfirmed || !isPhoneConfirmed || !isRKActive || !bazaarRkInput.trim()}
+                className="flex-1 bg-gradient-to-b from-sky-400 to-sky-600 hover:from-sky-300 hover:to-sky-500 disabled:opacity-50 text-black font-extrabold text-xs py-2.5 rounded-lg border border-sky-500/30 cursor-pointer uppercase tracking-wider"
+              >
+                Confirmar Anúncio
               </button>
             </div>
           </div>

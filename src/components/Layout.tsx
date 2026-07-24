@@ -308,12 +308,17 @@ export const Layout: React.FC<LayoutProps> = ({
                   <>
                     <div className="w-16 h-16 bg-[#080f1e] rounded-xl border border-amber-500/40 flex items-center justify-center overflow-hidden shadow-inner relative shrink-0 p-1">
                       <img 
-                        src={boostedCreature.looktype > 0 && boostedCreature.looktype <= 1875 ? `/sprites/Outfit_${boostedCreature.looktype}.gif` : `https://tibia.fandom.com/wiki/Special:FilePath/${encodeURIComponent(boostedCreature.name.replace(/\s+/g, "_"))}.gif`} 
+                        src={`/api/proxy/sprite/${encodeURIComponent(boostedCreature.name.replace(/\s+/g, "_"))}.gif`} 
                         alt={boostedCreature.name} 
                         className="max-w-full max-h-full object-contain filter drop-shadow-md" 
                         referrerPolicy="no-referrer"
                         onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).src = `https://tibia.fandom.com/wiki/Special:FilePath/${encodeURIComponent(boostedCreature.name.replace(/\s+/g, "_"))}.gif`;
+                          const target = e.currentTarget as HTMLImageElement;
+                          if (boostedCreature.looktypeEx && boostedCreature.looktypeEx > 0) {
+                            target.src = `/api/proxy/sprite/${boostedCreature.looktypeEx}.png`;
+                          } else if (boostedCreature.looktype && boostedCreature.looktype > 0) {
+                            target.src = `/sprites/Outfit_${boostedCreature.looktype}.gif`;
+                          }
                         }}
                       />
                     </div>
@@ -343,12 +348,17 @@ export const Layout: React.FC<LayoutProps> = ({
                   <>
                     <div className="w-16 h-16 bg-[#080f1e] rounded-xl border border-amber-500/40 flex items-center justify-center overflow-hidden shadow-inner relative shrink-0 p-1">
                       <img 
-                        src={boostedBoss.looktype > 0 && boostedBoss.looktype <= 1875 ? `/sprites/Outfit_${boostedBoss.looktype}.gif` : `https://tibia.fandom.com/wiki/Special:FilePath/${encodeURIComponent(boostedBoss.name.replace(/\s+/g, "_"))}.gif`} 
+                        src={`/api/proxy/sprite/${encodeURIComponent(boostedBoss.name.replace(/\s+/g, "_"))}.gif`} 
                         alt={boostedBoss.name} 
                         className="max-w-full max-h-full object-contain filter drop-shadow-md" 
                         referrerPolicy="no-referrer"
                         onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).src = `https://tibia.fandom.com/wiki/Special:FilePath/${encodeURIComponent(boostedBoss.name.replace(/\s+/g, "_"))}.gif`;
+                          const target = e.currentTarget as HTMLImageElement;
+                          if (boostedBoss.looktypeEx && boostedBoss.looktypeEx > 0) {
+                            target.src = `/api/proxy/sprite/${boostedBoss.looktypeEx}.png`;
+                          } else if (boostedBoss.looktype && boostedBoss.looktype > 0) {
+                            target.src = `/sprites/Outfit_${boostedBoss.looktype}.gif`;
+                          }
                         }}
                       />
                     </div>

@@ -110,6 +110,7 @@ export interface AccountInfo {
     premdays: number;
     creation: number;
     coins: number;
+    hasRecoveryKey?: boolean;
   };
   characters: Array<{
     id: number;
@@ -132,6 +133,7 @@ export interface ServerInfo {
 export interface BoostedCreatureInfo {
   name: string;
   looktype: number;
+  looktypeEx?: number;
   raceid: number;
   type: string;
   bonusExp: string;

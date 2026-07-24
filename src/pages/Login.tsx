@@ -1,11 +1,13 @@
 import React, { useState } from "react";
-import { LockKeyhole, Mail, KeyRound, AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { LockKeyhole, Mail, KeyRound, AlertCircle, ShieldAlert } from "lucide-react";
 import { api } from "../api";
 import { getVocationName } from "../utils";
+import { AccountRecoveryModal } from "../components/AccountRecoveryModal";
 
 interface LoginProps {
   onLoginSuccess: (account: any, token: string, characters: any[]) => void;
-  setCurrentSitePage: (page: any) => void;
+  setCurrentSitePage?: (page: any) => void;
   showNotification: (msg: string, type: "success" | "error" | "info") => void;
 }
 
@@ -14,9 +16,11 @@ export const Login: React.FC<LoginProps> = ({
   setCurrentSitePage,
   showNotification,
 }) => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,12 +53,20 @@ export const Login: React.FC<LoginProps> = ({
 
       onLoginSuccess(data.account, data.token, mappedMyChars);
       showNotification("Bem-vindo de volta! Acesso concedido!", "success");
-      setCurrentSitePage("account");
+      navigate("/account");
     } catch (err: any) {
       console.error(err);
       showNotification(err.message || "Erro ao conectar ao servidor de autenticação!", "error");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoToRegister = () => {
+    if (setCurrentSitePage) {
+      setCurrentSitePage("register");
+    } else {
+      navigate("/register");
     }
   };
 
@@ -90,10 +102,19 @@ export const Login: React.FC<LoginProps> = ({
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-sky-200 mb-1 flex items-center gap-1.5">
-                <KeyRound className="w-3.5 h-3.5 text-sky-400" />
-                Senha
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[11px] font-bold text-sky-200 flex items-center gap-1.5">
+                  <KeyRound className="w-3.5 h-3.5 text-sky-400" />
+                  Senha
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowRecoveryModal(true)}
+                  className="text-[10px] text-amber-400 hover:text-amber-300 font-bold hover:underline cursor-pointer"
+                >
+                  Esqueci minha senha
+                </button>
+              </div>
               <input 
                 type="password" 
                 required
@@ -120,20 +141,41 @@ export const Login: React.FC<LoginProps> = ({
             </button>
           </form>
 
-          <div className="border-t border-sky-500/10 pt-4 mt-4 text-center">
-            <p className="text-[11px] text-sky-200/60">
-              Ainda não possui uma conta de jogo?
-            </p>
-            <button 
-              onClick={() => setCurrentSitePage("register")}
-              className="mt-1 text-sky-300 hover:text-sky-100 hover:underline font-bold text-xs cursor-pointer"
-            >
-              Registrar nova conta grátis agora!
-            </button>
+          <div className="border-t border-sky-500/10 pt-4 mt-4 text-center space-y-2">
+            <div>
+              <p className="text-[11px] text-sky-200/60">
+                Perdeu o acesso à sua senha?
+              </p>
+              <button 
+                onClick={() => setShowRecoveryModal(true)}
+                className="mt-0.5 text-amber-400 hover:text-amber-200 hover:underline font-bold text-xs cursor-pointer flex items-center justify-center gap-1 mx-auto"
+              >
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+                Recuperar Conta com Recovery Key (RK)
+              </button>
+            </div>
+
+            <div className="pt-2 border-t border-sky-500/10">
+              <p className="text-[11px] text-sky-200/60">
+                Ainda não possui uma conta de jogo?
+              </p>
+              <button 
+                onClick={handleGoToRegister}
+                className="mt-1 text-sky-300 hover:text-sky-100 hover:underline font-bold text-xs cursor-pointer"
+              >
+                Registrar nova conta grátis agora!
+              </button>
+            </div>
           </div>
         </div>
 
       </div>
+
+      <AccountRecoveryModal
+        isOpen={showRecoveryModal}
+        onClose={() => setShowRecoveryModal(false)}
+        showNotification={showNotification}
+      />
     </div>
   );
 };

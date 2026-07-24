@@ -14,6 +14,7 @@ import jwt from "jsonwebtoken";
 import morgan from "morgan";
 import argon2 from "argon2";
 import cookieParser from "cookie-parser";
+import nodemailer from "nodemailer";
 
 import { logger, createAuditLog } from "./src/lib/logger";
 import { spriteCache } from "./src/lib/cache";
@@ -119,6 +120,155 @@ function verifyToken(token: string): number | null {
   }
 }
 
+// SMTP Transporter setup (Gmail)
+const smtpTransporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || "smtp.gmail.com",
+  port: parseInt(process.env.SMTP_PORT || "587"),
+  secure: false,
+  auth: {
+    user: process.env.SMTP_USER || "ghandja1@gmail.com",
+    pass: process.env.SMTP_PASS || "Kdao938@n"
+  },
+  tls: {
+    rejectUnauthorized: false
+  }
+});
+
+const LOGO_PATH = fs.existsSync("C:\\Users\\Usuario\\Documents\\chapadonia_imagens\\logotipo.png")
+  ? "C:\\Users\\Usuario\\Documents\\chapadonia_imagens\\logotipo.png"
+  : path.join(process.cwd(), "dist", "assets", "logotipo-YYtCZ9m7.png");
+
+async function sendConfirmationEmail(toEmail: string, code: string): Promise<boolean> {
+  try {
+    await smtpTransporter.sendMail({
+      from: process.env.SMTP_FROM || '"Chapadonia OT" <ghandja1@gmail.com>',
+      to: toEmail,
+      subject: "Chapadonia OT — Confirme seu E-mail de Cadastro",
+      html: `
+        <div style="background-color: #040914; padding: 40px 15px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+          <div style="max-width: 580px; margin: 0 auto; background-color: #0b172a; border-radius: 16px; border: 1px solid #1e3a8a; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+            
+            <div style="background: linear-gradient(180deg, #0e1e38 0%, #081020 100%); padding: 30px 20px; text-align: center; border-bottom: 2px solid #38bdf8;">
+              <img src="cid:chapadonia_logo" alt="Chapadonia OT Server" style="max-width: 440px; width: 100%; height: auto; display: block; margin: 0 auto;" />
+            </div>
+
+            <div style="padding: 35px 30px; color: #f8fafc; text-align: left;">
+              <h2 style="color: #38bdf8; font-size: 20px; font-weight: 800; margin-top: 0; margin-bottom: 12px; letter-spacing: 0.5px; font-family: Georgia, serif;">
+                🛡️ Confirmação de E-mail de Cadastro
+              </h2>
+              
+              <p style="font-size: 14px; color: #cbd5e1; line-height: 1.6; margin-bottom: 24px;">
+                Olá! Você solicitou a validação do seu endereço de e-mail na sua conta do <strong>Chapadonia OT Server</strong>.
+              </p>
+
+              <p style="font-size: 13px; color: #94a3b8; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">
+                Seu Código de Verificação:
+              </p>
+
+              <div style="background-color: #050b14; border: 2px solid #38bdf8; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 28px; box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.6);">
+                <span style="font-family: 'Courier New', Courier, monospace; font-size: 32px; font-weight: 900; color: #fbbf24; letter-spacing: 10px; display: inline-block;">
+                  ${code}
+                </span>
+              </div>
+
+              <p style="font-size: 13px; color: #94a3b8; line-height: 1.5; margin-bottom: 24px;">
+                Insira este código no painel da sua conta no site para concluir a verificação com sucesso. O código é de uso único e pessoal.
+              </p>
+
+              <div style="background-color: rgba(245, 158, 11, 0.1); border-left: 4px solid #f59e0b; padding: 14px 16px; border-radius: 8px; font-size: 12px; color: #fef3c7; line-height: 1.5;">
+                <strong>⚠️ Segurança:</strong> A equipe do Chapadonia nunca solicita seus códigos ou senhas por mensagem privada, Discord ou suporte.
+              </div>
+            </div>
+
+            <div style="background-color: #060d19; padding: 24px 30px; text-align: center; border-top: 1px solid #1e293b; font-size: 11px; color: #64748b; line-height: 1.6;">
+              <p style="margin: 0 0 6px 0; font-weight: 700; color: #94a3b8;">Chapadonia OT Server — Official Game Services</p>
+              <p style="margin: 0;">Você recebeu este e-mail por estar cadastrado na plataforma oficial Chapadonia OT.</p>
+              <p style="margin: 6px 0 0 0; color: #475569;">© 2026 Chapadonia OT Server. Todos os direitos reservados.</p>
+            </div>
+
+          </div>
+        </div>
+      `,
+      attachments: [
+        {
+          filename: "logotipo.png",
+          path: LOGO_PATH,
+          cid: "chapadonia_logo"
+        }
+      ]
+    });
+    logger.info({ toEmail }, "Confirmation email sent successfully via SMTP with enterprise logo");
+    return true;
+  } catch (err) {
+    logger.error({ err, toEmail }, "Failed to send confirmation email via SMTP");
+    return false;
+  }
+}
+
+async function sendRecoveryKeyEmail(toEmail: string, recoveryKey: string): Promise<boolean> {
+  try {
+    await smtpTransporter.sendMail({
+      from: process.env.SMTP_FROM || '"Chapadonia OT" <ghandja1@gmail.com>',
+      to: toEmail,
+      subject: "Chapadonia OT — Sua Recovery Key (Chave de Recuperação)",
+      html: `
+        <div style="background-color: #040914; padding: 40px 15px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+          <div style="max-width: 580px; margin: 0 auto; background-color: #0b172a; border-radius: 16px; border: 1px solid #f59e0b; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+            
+            <div style="background: linear-gradient(180deg, #0e1e38 0%, #081020 100%); padding: 30px 20px; text-align: center; border-bottom: 2px solid #f59e0b;">
+              <img src="cid:chapadonia_logo" alt="Chapadonia OT Server" style="max-width: 440px; width: 100%; height: auto; display: block; margin: 0 auto;" />
+            </div>
+
+            <div style="padding: 35px 30px; color: #f8fafc; text-align: left;">
+              <h2 style="color: #f59e0b; font-size: 20px; font-weight: 800; margin-top: 0; margin-bottom: 12px; letter-spacing: 0.5px; font-family: Georgia, serif;">
+                🔑 Sua Chave de Recuperação (Recovery Key)
+              </h2>
+              
+              <p style="font-size: 14px; color: #cbd5e1; line-height: 1.6; margin-bottom: 24px;">
+                Sua Chave de Recuperação (RK) oficial foi gerada com sucesso para a sua conta no <strong>Chapadonia OT Server</strong>.
+              </p>
+
+              <p style="font-size: 13px; color: #94a3b8; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">
+                Sua Recovery Key (RK):
+              </p>
+
+              <div style="background-color: #050b14; border: 2px dashed #f59e0b; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 28px; box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.6);">
+                <span style="font-family: 'Courier New', Courier, monospace; font-size: 24px; font-weight: 900; color: #fbbf24; letter-spacing: 4px; display: inline-block;">
+                  ${recoveryKey}
+                </span>
+              </div>
+
+              <div style="background-color: rgba(239, 68, 68, 0.12); border-left: 4px solid #ef4444; padding: 16px; border-radius: 8px; font-size: 12px; color: #fecdd3; line-height: 1.6; margin-bottom: 20px;">
+                <strong style="color: #f87171; font-size: 13px; display: block; margin-bottom: 4px;">⚠️ ALERTA DE ALTA SEGURANÇA:</strong>
+                Guarde esta chave em um local seguro na sua casa! A Recovery Key é necessária para recuperar sua conta caso perca a senha e para autorizar anúncios no <strong>Bazar de Personagens</strong>.
+              </div>
+            </div>
+
+            <div style="background-color: #060d19; padding: 24px 30px; text-align: center; border-top: 1px solid #1e293b; font-size: 11px; color: #64748b; line-height: 1.6;">
+              <p style="margin: 0 0 6px 0; font-weight: 700; color: #94a3b8;">Chapadonia OT Server — Official Game Services</p>
+              <p style="margin: 0;">Você recebeu este e-mail por estar cadastrado na plataforma oficial Chapadonia OT.</p>
+              <p style="margin: 6px 0 0 0; color: #475569;">© 2026 Chapadonia OT Server. Todos os direitos reservados.</p>
+            </div>
+
+          </div>
+        </div>
+      `,
+      attachments: [
+        {
+          filename: "logotipo.png",
+          path: LOGO_PATH,
+          cid: "chapadonia_logo"
+        }
+      ]
+    });
+    logger.info({ toEmail }, "Recovery Key email sent successfully via SMTP with enterprise logo");
+    return true;
+  } catch (err) {
+    logger.error({ err, toEmail }, "Failed to send Recovery Key email via SMTP");
+    return false;
+  }
+}
+
 // MySQL pool setup
 let pool: mysql.Pool | null = null;
 
@@ -161,6 +311,8 @@ async function withTransaction<T>(fn: (conn: mysql.PoolConnection) => Promise<T>
   }
 }
 
+
+
 // MySQL account helpers (source of truth for game-compatible accounts)
 async function findAccountByEmail(email: string) {
   if (pool) {
@@ -168,15 +320,40 @@ async function findAccountByEmail(email: string) {
       const [rows] = await pool.query("SELECT * FROM accounts WHERE email = ?", [email.toLowerCase()]);
       if ((rows as any[]).length > 0) {
         const row = (rows as any[])[0];
-        return { id: row.id, email: row.email, password: row.password, coins: row.coins || 0, name: row.name, type: row.type };
+        return {
+          id: row.id,
+          email: row.email,
+          password: row.password,
+          coins: row.coins || 0,
+          name: row.name,
+          type: row.type,
+          recovery_key: row.recovery_key || "",
+          hasRecoveryKey: !!(row.recovery_key && row.recovery_key.trim() !== ""),
+          phone: row.phone || "",
+          isPhoneConfirmed: !!row.phone_confirmed,
+          isEmailConfirmed: !!row.email_confirmed,
+        };
       }
+      // When MySQL pool is connected, MySQL is source of truth. Return undefined if email not found.
+      return undefined;
     } catch (err) {
       logger.error({ err }, "MySQL findAccountByEmail");
     }
   }
-  // Fallback to JSON
+  // Fallback to JSON only when MySQL pool is not active
   const db = await getDBState();
-  return db.accounts.find(acc => acc.email.toLowerCase() === email.toLowerCase());
+  const acc = db.accounts.find(a => a.email.toLowerCase() === email.toLowerCase());
+  if (acc) {
+    return {
+      ...acc,
+      recovery_key: (acc as any).recovery_key || "",
+      hasRecoveryKey: !!((acc as any).recovery_key && (acc as any).recovery_key.trim() !== ""),
+      phone: (acc as any).phone || "",
+      isPhoneConfirmed: !!(acc as any).isPhoneConfirmed,
+      isEmailConfirmed: !!(acc as any).isEmailConfirmed,
+    };
+  }
+  return undefined;
 }
 
 async function createAccountInMySQL(email: string, passwordHash: string, name: string, type: number = 1) {
@@ -184,7 +361,7 @@ async function createAccountInMySQL(email: string, passwordHash: string, name: s
     try {
       const now = Math.floor(Date.now() / 1000);
       const [result] = await pool.query(
-        "INSERT INTO accounts (name, email, password, type, creation, premdays, lastday, coins) VALUES (?, ?, ?, ?, ?, 65535, 0, 1250)",
+        "INSERT INTO accounts (name, email, password, type, creation, premdays, lastday, coins) VALUES (?, ?, ?, ?, ?, 3, 0, 0)",
         [name, email.toLowerCase(), passwordHash, type, now]
       );
       return (result as any).insertId;
@@ -363,7 +540,7 @@ async function setConfigMySQL(key: string, value: string) {
 async function getBoostedCreatureMySQL(): Promise<any> {
   if (!pool) return null;
   try {
-    const [rows] = await pool.query("SELECT boostname, looktype, raceid, date FROM boosted_creature LIMIT 1");
+    const [rows] = await pool.query("SELECT * FROM boosted_creature LIMIT 1");
     if ((rows as any[]).length > 0) return (rows as any[])[0];
     return null;
   } catch (err) {
@@ -375,7 +552,7 @@ async function getBoostedCreatureMySQL(): Promise<any> {
 async function getBoostedBossMySQL(): Promise<any> {
   if (!pool) return null;
   try {
-    const [rows] = await pool.query("SELECT boostname, looktype, looktypeEx, raceid, date FROM boosted_boss LIMIT 1");
+    const [rows] = await pool.query("SELECT * FROM boosted_boss LIMIT 1");
     if ((rows as any[]).length > 0) return (rows as any[])[0];
     return null;
   } catch (err) {
@@ -486,8 +663,23 @@ async function getOnlinePlayersMySQL(): Promise<string[]> {
 async function findAccountByIdMySQL(accountId: number): Promise<any> {
   if (!pool) return null;
   try {
-    const [rows] = await pool.query("SELECT id, name, email, coins, type FROM accounts WHERE id=?", [accountId]);
-    if ((rows as any[]).length > 0) { const r = (rows as any[])[0]; return { id: r.id, name: r.name, email: r.email, coins: r.coins, type: r.type, password: "" }; }
+    const [rows] = await pool.query("SELECT id, name, email, coins, type, recovery_key, password, phone, phone_confirmed, email_confirmed FROM accounts WHERE id=?", [accountId]);
+    if ((rows as any[]).length > 0) {
+      const r = (rows as any[])[0];
+      return {
+        id: r.id,
+        name: r.name,
+        email: r.email,
+        coins: r.coins,
+        type: r.type,
+        recovery_key: r.recovery_key || "",
+        hasRecoveryKey: !!(r.recovery_key && r.recovery_key.trim() !== ""),
+        password: r.password || "",
+        phone: r.phone || "",
+        isPhoneConfirmed: !!r.phone_confirmed,
+        isEmailConfirmed: !!r.email_confirmed,
+      };
+    }
     return null;
   } catch { return null; }
 }
@@ -643,10 +835,10 @@ function loadDB(): DBState {
   const hasAdmin = db.accounts.some(acc => acc.email.toLowerCase() === ADMIN_EMAIL);
   if (!hasAdmin) {
     db.accounts.push({
-      id: 999,
+      id: 1,
       email: ADMIN_EMAIL,
       password: hashPasswordSync(ADMIN_PASSWORD),
-      coins: 50000,
+      coins: 0,
       name: "Administrador",
       type: 6
     });
@@ -681,7 +873,7 @@ async function initializeMySQL() {
         premdays INT NOT NULL DEFAULT 0,
         lastday INT UNSIGNED NOT NULL DEFAULT 0,
         creation INT UNSIGNED NOT NULL DEFAULT 0,
-        coins INT UNSIGNED DEFAULT 1250,
+        coins INT UNSIGNED DEFAULT 0,
         coins_transferable INT UNSIGNED NOT NULL DEFAULT 0,
         INDEX accounts_email (email)
       )
@@ -752,17 +944,8 @@ async function initializeMySQL() {
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS server_config (
-        id INT PRIMARY KEY DEFAULT 1,
-        serverName VARCHAR(255) NOT NULL,
-        experienceRate INT NOT NULL,
-        serverVipBonus INT NOT NULL,
-        contactEmail VARCHAR(255) NOT NULL,
-        encryptionType VARCHAR(50) NOT NULL,
-        maintenanceMode BOOLEAN NOT NULL,
-        eventDoubleXp  BOOLEAN NOT NULL,
-        eventDoubleSkill BOOLEAN NOT NULL,
-        maxPlayers INT NOT NULL,
-        activeEvents TEXT NOT NULL
+        config VARCHAR(50) PRIMARY KEY,
+        value VARCHAR(256) NOT NULL
       )
     `);
 
@@ -771,18 +954,15 @@ async function initializeMySQL() {
       logger.info("Seeding initial accounts table...");
       const adminHash = await hashPassword(ADMIN_PASSWORD);
       const now = Math.floor(Date.now() / 1000);
-      await pool.query("INSERT INTO accounts (id, name, email, password, type, creation, premdays, lastday, coins) VALUES (999, 'Administrador', ?, ?, 6, ?, 65535, 0, 50000)", [ADMIN_EMAIL, adminHash, now]);
+      await pool.query("INSERT INTO accounts (id, name, email, password, type, creation, premdays, lastday, coins) VALUES (1, 'Administrador', ?, ?, 6, ?, 3, 0, 0)", [ADMIN_EMAIL, adminHash, now]);
     }
 
     const [cfg] = await pool.query("SELECT COUNT(*) as count FROM server_config");
     if ((cfg as any)[0].count === 0) {
       logger.info("Seeding initial server_config table...");
-      await pool.query(`
-        INSERT INTO server_config (id, serverName, experienceRate, serverVipBonus, contactEmail, encryptionType, maintenanceMode, eventDoubleXp, eventDoubleSkill, maxPlayers, activeEvents)
-        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [
-        defaultServerConfig.serverName, defaultServerConfig.experienceRate, defaultServerConfig.serverVipBonus, defaultServerConfig.contactEmail, defaultServerConfig.encryptionType, defaultServerConfig.maintenanceMode ? 1 : 0, defaultServerConfig.eventDoubleXp ? 1 : 0, defaultServerConfig.eventDoubleSkill ? 1 : 0, defaultServerConfig.maxPlayers, defaultServerConfig.activeEvents
-      ]);
+      for (const [k, v] of Object.entries(defaultServerConfig)) {
+        await pool.query("INSERT INTO server_config (config, value) VALUES (?,?) ON DUPLICATE KEY UPDATE value=?", [k, String(v), String(v)]);
+      }
     }
 
     logger.info("MySQL initialization completed");
@@ -803,7 +983,7 @@ async function getDBState(): Promise<DBState> {
     const [playersRows] = await pool.query("SELECT * FROM players");
     const [guildsRows] = await pool.query("SELECT * FROM guilds");
     const [newsRows] = await pool.query("SELECT * FROM news ORDER BY id DESC");
-    const [configRows] = await pool.query("SELECT * FROM server_config WHERE id = 1");
+    const [configRows] = await pool.query("SELECT config, value FROM server_config");
 
     const accounts = (accountsRows as any[]).map(r => ({
       id: r.id,
@@ -864,18 +1044,19 @@ async function getDBState(): Promise<DBState> {
 
     let config = defaultServerConfig;
     if ((configRows as any[]).length > 0) {
-      const c = (configRows as any[])[0];
+      const cfgObj: any = {};
+      for (const row of (configRows as any[])) cfgObj[row.config] = row.value;
       config = {
-        serverName: c.serverName,
-        experienceRate: c.experienceRate,
-        serverVipBonus: c.serverVipBonus,
-        contactEmail: c.contactEmail,
-        encryptionType: c.encryptionType,
-        maintenanceMode: Boolean(c.maintenanceMode),
-        eventDoubleXp: Boolean(c.eventDoubleXp),
-        eventDoubleSkill: Boolean(c.eventDoubleSkill),
-        maxPlayers: c.maxPlayers,
-        activeEvents: c.activeEvents
+        serverName: cfgObj.serverName || defaultServerConfig.serverName,
+        experienceRate: Number(cfgObj.experienceRate || defaultServerConfig.experienceRate),
+        serverVipBonus: Number(cfgObj.serverVipBonus || defaultServerConfig.serverVipBonus),
+        contactEmail: cfgObj.contactEmail || defaultServerConfig.contactEmail,
+        encryptionType: cfgObj.encryptionType || defaultServerConfig.encryptionType,
+        maintenanceMode: cfgObj.maintenanceMode === "true" || cfgObj.maintenanceMode === "1",
+        eventDoubleXp: cfgObj.eventDoubleXp === "true" || cfgObj.eventDoubleXp === "1",
+        eventDoubleSkill: cfgObj.eventDoubleSkill === "true" || cfgObj.eventDoubleSkill === "1",
+        maxPlayers: Number(cfgObj.maxPlayers || defaultServerConfig.maxPlayers),
+        activeEvents: cfgObj.activeEvents || defaultServerConfig.activeEvents
       };
     }
 
@@ -898,48 +1079,14 @@ async function saveDBState(state: DBState): Promise<void> {
         INSERT INTO accounts (id, name, email, password, type, coins)
         VALUES (?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
-          name = VALUES(name),
-          email = VALUES(email),
-          password = VALUES(password),
-          type = VALUES(type),
-          coins = VALUES(coins)
+          coins = VALUES(coins),
+          password = VALUES(password)
       `, [acc.id, acc.name || acc.email, acc.email, acc.password, acc.type || 1, acc.coins]);
     }
     // Don't delete accounts not in state — game server manages them
 
-    for (const p of state.players) {
-      await pool.query(`
-        INSERT INTO players (id, name, level, vocation, experience, town_id, sex, onlinetime, balance, health, healthmax, mana, manamax, maglevel, skill_sword, skill_axe, skill_club, skill_dist, skill_shielding, skill_fist, skill_fishing, online, deaths, account_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE
-          name = VALUES(name),
-          level = VALUES(level),
-          vocation = VALUES(vocation),
-          experience = VALUES(experience),
-          town_id = VALUES(town_id),
-          sex = VALUES(sex),
-          onlinetime = VALUES(onlinetime),
-          balance = VALUES(balance),
-          health = VALUES(health),
-          healthmax = VALUES(healthmax),
-          mana = VALUES(mana),
-          manamax = VALUES(manamax),
-          maglevel = VALUES(maglevel),
-          skill_sword = VALUES(skill_sword),
-          skill_axe = VALUES(skill_axe),
-          skill_club = VALUES(skill_club),
-          skill_dist = VALUES(skill_dist),
-          skill_shielding = VALUES(skill_shielding),
-          skill_fist = VALUES(skill_fist),
-          skill_fishing = VALUES(skill_fishing),
-          online = VALUES(online),
-          deaths = VALUES(deaths),
-          account_id = VALUES(account_id)
-      `, [
-        p.id, p.name, p.level, p.vocation, p.experience, p.town_id, p.sex, p.onlinetime, p.balance, p.health, p.healthmax, p.mana, p.manamax, p.maglevel, p.skill_sword, p.skill_axe, p.skill_club, p.skill_dist, p.skill_shielding, p.skill_fist, p.skill_fishing, p.online ? 1 : 0, JSON.stringify(p.deaths), p.account_id
-      ]);
-    }
-    // Don't delete players not in state — game server manages them
+    // Accounts, players and characters are created and updated directly via MySQL endpoints.
+    // Sync server_config, guilds and news if present.
 
     if (state.guilds) {
       for (const g of state.guilds) {
@@ -989,24 +1136,9 @@ async function saveDBState(state: DBState): Promise<void> {
     }
 
     if (state.config) {
-      const c = state.config;
-      await pool.query(`
-        INSERT INTO server_config (id, serverName, experienceRate, serverVipBonus, contactEmail, encryptionType, maintenanceMode, eventDoubleXp, eventDoubleSkill, maxPlayers, activeEvents)
-        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE
-          serverName = VALUES(serverName),
-          experienceRate = VALUES(experienceRate),
-          serverVipBonus = VALUES(serverVipBonus),
-          contactEmail = VALUES(contactEmail),
-          encryptionType = VALUES(encryptionType),
-          maintenanceMode = VALUES(maintenanceMode),
-          eventDoubleXp = VALUES(eventDoubleXp),
-          eventDoubleSkill = VALUES(eventDoubleSkill),
-          maxPlayers = VALUES(maxPlayers),
-          activeEvents = VALUES(activeEvents)
-      `, [
-        c.serverName, c.experienceRate, c.serverVipBonus, c.contactEmail, c.encryptionType, c.maintenanceMode ? 1 : 0, c.eventDoubleXp ? 1 : 0, c.eventDoubleSkill ? 1 : 0, c.maxPlayers, c.activeEvents
-      ]);
+      for (const [k, v] of Object.entries(state.config)) {
+        await pool.query("INSERT INTO server_config (config, value) VALUES (?,?) ON DUPLICATE KEY UPDATE value=?", [k, String(v), String(v)]);
+      }
     }
   } catch (err) {
     logger.error({ err }, "Failed to sync state to MySQL");
@@ -1020,8 +1152,8 @@ async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT || 3000);
 
-  // Redirect HTTP to HTTPS in production
-  if (process.env.NODE_ENV === "production") {
+  // Redirect HTTP to HTTPS in production (only if explicitly enabled via FORCE_HTTPS)
+  if (process.env.NODE_ENV === "production" && process.env.FORCE_HTTPS === "true") {
     app.use((req, res, next) => {
       if (req.headers["x-forwarded-proto"] && req.headers["x-forwarded-proto"] !== "https") {
         return res.redirect(`https://${req.headers.host}${req.url}`);
@@ -1035,30 +1167,25 @@ async function startServer() {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "https://tibia.fandom.com"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://tibia.fandom.com"],
         imgSrc: ["'self'", "data:", "https://*.tibia.com", "https://*.fandom.com", "https://*.nocookie.net", "https://static.tibia.com", "https://outfit-service.tibia.com"],
         styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
-        connectSrc: ["'self'"],
+        connectSrc: ["'self'", "*"],
         fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
         objectSrc: ["'none'"],
         frameAncestors: ["'none'"],
         formAction: ["'self'"],
         baseUri: ["'none'"],
+        upgradeInsecureRequests: null,
       },
     },
-    strictTransportSecurity: {
-      maxAge: 31536000,
-      includeSubDomains: true,
-      preload: true,
-    },
+    strictTransportSecurity: false,
     referrerPolicy: { policy: "strict-origin-when-cross-origin" },
     xFrameOptions: { action: "deny" },
     xPermittedCrossDomainPolicies: { permittedPolicies: "none" },
   }));
   app.use(cors({
-    origin: process.env.NODE_ENV === "production"
-      ? (process.env.CORS_ORIGIN || "http://localhost")
-      : ["http://localhost:3000", "http://localhost:5173"],
+    origin: true,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -1217,7 +1344,8 @@ async function startServer() {
     if (boosted && boosted.boostname && boosted.boostname !== "default") {
       return res.json({
         name: boosted.boostname,
-        looktype: boosted.looktype || 136,
+        looktype: boosted.looktype ?? 0,
+        looktypeEx: boosted.looktypeEx ?? 0,
         raceid: boosted.raceid || 0,
         type: "Criatura Boostada",
         bonusExp: "Dobro de Exp, +50% Gold & Respawn Acelerado"
@@ -1226,6 +1354,7 @@ async function startServer() {
     res.json({
       name: "Hideous Fungus",
       looktype: 499,
+      looktypeEx: 0,
       raceid: 891,
       type: "Criatura Boostada",
       bonusExp: "Dobro de Exp, +50% Gold & Respawn Acelerado"
@@ -1238,8 +1367,8 @@ async function startServer() {
     if (boosted && boosted.boostname && boosted.boostname !== "default") {
       return res.json({
         name: boosted.boostname,
-        looktype: boosted.looktype || 136,
-        looktypeEx: boosted.looktypeEx || 0,
+        looktype: boosted.looktype ?? 0,
+        looktypeEx: boosted.looktypeEx ?? 0,
         raceid: boosted.raceid || 0,
         type: "Boss Boostado",
         bonusLoot: "+250% Bônus de Loot & 3x Bosstiary Kills"
@@ -1268,7 +1397,7 @@ async function startServer() {
       return res.status(400).json({ message: "Título, categoria e conteúdo são obrigatórios!" });
     }
     const id = await createNewsMySQL(title, category, content, bullets, author || "Administrador");
-    auditLog("ADMIN ACTION: account [{}] created news [{}]", req.accId || 999, title);
+    auditLog("ADMIN ACTION: account [{}] created news [{}]", req.accId || 1, title);
     res.status(201).json({ id, title, category, content, bullets: bullets || [], date: new Date().toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" }), author: author || "Administrador" });
   });
 
@@ -1276,7 +1405,7 @@ async function startServer() {
   app.put("/api/admin/news/:id", requireAdmin, async (req, res) => {
     const id = Number(req.params.id);
     await updateNewsMySQL(id, req.body);
-    auditLog("ADMIN ACTION: account [{}] updated news [{}]", req.accId || 999, id);
+    auditLog("ADMIN ACTION: account [{}] updated news [{}]", req.accId || 1, id);
     res.json({ message: "Notícia atualizada!" });
   });
 
@@ -1284,7 +1413,7 @@ async function startServer() {
   app.delete("/api/admin/news/:id", requireAdmin, async (req, res) => {
     const id = Number(req.params.id);
     await deleteNewsMySQL(id);
-    auditLog("ADMIN ACTION: account [{}] deleted news [{}]", req.accId || 999, id);
+    auditLog("ADMIN ACTION: account [{}] deleted news [{}]", req.accId || 1, id);
     res.json({ message: "Notícia removida!" });
   });
 
@@ -1679,7 +1808,7 @@ async function startServer() {
       id: accId,
       email: emailLower,
       password: passwordHash,
-      coins: 1250,
+      coins: 0,
       name: accountName,
       type: 1
     });
@@ -1692,8 +1821,9 @@ async function startServer() {
   app.post("/api/auth/login", authLimiter, async (req, res) => {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) {
+      const errorMsg = parsed.error.issues.map((i) => i.message).join(", ") || "Dados inválidos.";
       return res.status(400).json({
-        message: "Dados inválidos.",
+        message: errorMsg,
         errors: parsed.error.issues.map((i) => ({ field: i.path.join("."), message: i.message })),
       });
     }
@@ -1728,14 +1858,14 @@ async function startServer() {
         id: account.id,
         email: account.email,
         coins: account.coins,
-        name: account.name
+        name: account.name,
+        hasRecoveryKey: account.hasRecoveryKey,
       },
       characters: chars
     });
   });
 
   // 7. Auth: Me Profile
-  // Returns 200 always (null account when not authenticated) — avoids 401 noise in console
   app.get("/api/auth/me", async (req, res) => {
     let token = req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.substring(7) : undefined;
     const hasAuthHeader = !!token;
@@ -1759,10 +1889,137 @@ async function startServer() {
     const freshToken = generateToken(accId);
     console.log("[AUTH] OK id:%d chars:%d", accId, chars.length);
     res.json({
-      account: { id: account.id, email: account.email, coins: account.coins, name: account.name },
+      account: {
+        id: account.id,
+        email: account.email,
+        coins: account.coins,
+        name: account.name,
+        hasRecoveryKey: account.hasRecoveryKey,
+        phone: account.phone,
+        isPhoneConfirmed: account.isPhoneConfirmed,
+        isEmailConfirmed: account.isEmailConfirmed,
+      },
       characters: chars,
       token: freshToken
     });
+  });
+
+  // 7.6 Generate Recovery Key (Requires E-mail Confirmed first & sends RK to email)
+  app.post("/api/auth/generate-rk", requireAuth, async (req: any, res) => {
+    const accId = req.accId;
+    const account = await findAccountByIdMySQL(accId);
+    if (!account) {
+      return res.status(404).json({ message: "Conta não encontrada." });
+    }
+
+    if (!account.isEmailConfirmed) {
+      return res.status(400).json({ message: "Segurança: Você precisa confirmar o seu E-mail antes de gerar a Recovery Key (RK)!" });
+    }
+
+    if (account.hasRecoveryKey) {
+      return res.status(400).json({ message: "Sua conta já possui uma Recovery Key gerada!" });
+    }
+
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    const segment = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    const newRK = `${segment()}-${segment()}-${segment()}-${segment()}`;
+
+    if (pool) {
+      await pool.query("UPDATE accounts SET recovery_key = ? WHERE id = ?", [newRK, accId]);
+    } else {
+      const db = await getDBState();
+      const acc = db.accounts.find(a => a.id === accId);
+      if (acc) {
+        (acc as any).recovery_key = newRK;
+        await saveDBState(db);
+      }
+    }
+
+    await sendRecoveryKeyEmail(account.email, newRK);
+    auditLog("RK GENERATED: account {} generated RK and sent to email {}", accId, account.email);
+
+    res.json({
+      message: `Recovery Key gerada com sucesso e enviada para o seu e-mail (${account.email})!`,
+      recoveryKey: newRK,
+    });
+  });
+
+  // 7.61 Send Confirmation Email Code via SMTP
+  app.post("/api/auth/send-confirm-email", requireAuth, async (req: any, res) => {
+    const accId = req.accId;
+    const account = await findAccountByIdMySQL(accId);
+    if (!account) return res.status(404).json({ message: "Conta não encontrada." });
+
+    if (account.isEmailConfirmed) {
+      return res.status(400).json({ message: "Seu e-mail já está verificado e confirmado!" });
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    if (pool) {
+      await pool.query("UPDATE accounts SET email_code = ? WHERE id = ?", [code, accId]);
+    }
+
+    const sent = await sendConfirmationEmail(account.email, code);
+    if (!sent) {
+      return res.status(500).json({ message: "Falha ao enviar e-mail via servidor SMTP. Verifique suas credenciais no .env." });
+    }
+
+    res.json({ message: `Código de verificação enviado para o seu e-mail (${account.email})!` });
+  });
+
+  // 7.62 Verify E-mail Confirmation Code
+  app.post("/api/auth/confirm-email-code", requireAuth, async (req: any, res) => {
+    const accId = req.accId;
+    const { code } = req.body;
+    if (!code || code.trim().length !== 6) {
+      return res.status(400).json({ message: "Digite o código de 6 dígitos enviado para seu e-mail!" });
+    }
+
+    const account = await findAccountByIdMySQL(accId);
+    if (!account) return res.status(404).json({ message: "Conta não encontrada." });
+
+    const cleanInputCode = code.trim();
+    if (pool) {
+      const [rows] = await pool.query("SELECT email_code FROM accounts WHERE id = ?", [accId]);
+      const storedCode = (rows as any[])[0]?.email_code || "";
+      if (cleanInputCode !== storedCode) {
+        return res.status(400).json({ message: "Código de confirmação incorreto! Verifique o e-mail recebido." });
+      }
+      await pool.query("UPDATE accounts SET email_confirmed = 1, email_code = '' WHERE id = ?", [accId]);
+    }
+
+    auditLog("EMAIL CONFIRMED: account {} confirmed email {}", accId, account.email);
+    res.json({ message: "E-mail confirmado com sucesso!", isEmailConfirmed: true });
+  });
+
+  // 7.7 Account Recovery via Recovery Key
+  app.post("/api/auth/recover-account", authLimiter, async (req, res) => {
+    const { email, recoveryKey, newPassword } = req.body;
+    if (!email || !recoveryKey || !newPassword) {
+      return res.status(400).json({ message: "E-mail, Recovery Key e Nova Senha são obrigatórios." });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "A nova senha deve ter pelo menos 6 caracteres." });
+    }
+
+    const account = await findAccountByEmail(email);
+    if (!account) {
+      return res.status(400).json({ message: "Dados inválidos. Verifique o e-mail e a Recovery Key." });
+    }
+
+    const cleanInputKey = recoveryKey.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+    const cleanStoredKey = (account.recovery_key || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+
+    if (!cleanStoredKey || cleanInputKey !== cleanStoredKey) {
+      return res.status(400).json({ message: "Recovery Key inválida para este e-mail." });
+    }
+
+    const newHash = await hashPassword(newPassword);
+    await updateAccountPasswordInMySQL(account.id, newHash);
+
+    logger.info({ accountId: account.id, email: account.email }, "Account recovered successfully via RK");
+
+    res.json({ message: "Conta recuperada com sucesso! Sua nova senha já está ativa. Você já pode fazer login." });
   });
 
   // 7.5 Auth: Create Character (MySQL)
@@ -1797,6 +2054,73 @@ async function startServer() {
     auditLog("CHARACTER CREATED: {} (id:{}) by account {}", nameCheck.sanitized, playerId, req.accId);
     hooks.fire("player:create", { name: nameCheck.sanitized, playerId, accountId: req.accId, vocation, gender });
     res.status(201).json({ message: "Personagem criado com sucesso!", player: { id: playerId, name: nameCheck.sanitized, vocation, level: 1, gender } });
+  });
+
+  // 7.51 Delete Character
+  app.post("/api/auth/delete-character", requireAuth, async (req: any, res) => {
+    const accId = req.accId;
+    const { characterId, characterName } = req.body;
+    if (!characterId && !characterName) {
+      return res.status(400).json({ message: "ID ou nome do personagem é obrigatório." });
+    }
+
+    let player: any = null;
+    if (characterId) {
+      player = await findPlayerByIdMySQL(Number(characterId));
+    } else if (characterName) {
+      player = await findPlayerByNameMySQL(characterName);
+    }
+
+    if (!player || player.account_id !== accId) {
+      return res.status(404).json({ message: "Personagem não encontrado ou não pertence a esta conta." });
+    }
+
+    if (pool) {
+      const [onlineRows] = await pool.query("SELECT 1 FROM players_online WHERE player_id = ?", [player.id]);
+      if ((onlineRows as any[]).length > 0) {
+        return res.status(400).json({ message: "Não é possível deletar um personagem que está online no jogo." });
+      }
+      const [bazaarRows] = await pool.query("SELECT 1 FROM bazaar_listings WHERE name = ? AND sold = 0", [player.name]);
+      if ((bazaarRows as any[]).length > 0) {
+        return res.status(400).json({ message: "Não é possível deletar um personagem anunciado no Bazar de Personagens." });
+      }
+
+      await pool.query("DELETE FROM players WHERE id = ? AND account_id = ?", [player.id, accId]);
+    } else {
+      const db = await getDBState();
+      db.players = (db.players || []).filter(p => !(p.id === player.id && p.account_id === accId));
+      await saveDBState(db);
+    }
+
+    auditLog("CHARACTER DELETED: {} (id:{}) by account {}", player.name, player.id, accId);
+    const updatedChars = await findPlayersByAccount(accId);
+
+    res.json({
+      message: `Personagem '${player.name}' deletado com sucesso!`,
+      characters: updatedChars
+    });
+  });
+
+  // 7.52 Confirm Phone Number
+  app.post("/api/auth/confirm-phone", requireAuth, async (req: any, res) => {
+    const accId = req.accId;
+    const { phone } = req.body;
+    if (!phone || phone.trim().length < 8) {
+      return res.status(400).json({ message: "Insira um número de celular válido com DDD." });
+    }
+    const cleanPhone = phone.trim();
+
+    if (pool) {
+      await pool.query("UPDATE accounts SET phone = ?, phone_confirmed = 1 WHERE id = ?", [cleanPhone, accId]);
+    }
+
+    auditLog("PHONE CONFIRMED: account {} confirmed phone {}", accId, cleanPhone);
+
+    res.json({
+      message: "Número de celular confirmado com sucesso!",
+      phone: cleanPhone,
+      isPhoneConfirmed: true
+    });
   });
 
   // 8. Auth: Change Password
@@ -2047,7 +2371,7 @@ async function startServer() {
     res.json(listings || []);
   });
 
-  // 5. List Character on Bazaar (with 10% tax)
+  // 5. List Character on Bazaar (with 10% tax, RK verification, Email & Phone confirmation)
   app.post("/api/bazaar/list", financialLimiter, async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -2060,7 +2384,7 @@ async function startServer() {
       return res.status(401).json({ message: "Sessão expirada ou inválida." });
     }
 
-    const { characterName, price } = req.body;
+    const { characterName, price, recoveryKey, isEmailConfirmed, isPhoneConfirmed } = req.body;
     const listPrice = parseInt(price);
     if (isNaN(listPrice) || listPrice < 50) {
       return res.status(400).json({ message: "O preço mínimo de venda para personagens é de 50 Coins!" });
@@ -2068,22 +2392,33 @@ async function startServer() {
 
     const listingFee = Math.ceil(listPrice * 0.1);
 
-    let account: { id: number; coins: number; name: string } | undefined;
-    if (pool) {
-      const [accRows] = await pool.query("SELECT id, coins, name FROM accounts WHERE id = ?", [accId]);
-      if ((accRows as any[]).length > 0) account = (accRows as any[])[0];
-    }
-    if (!account) {
-      const db = await getDBState();
-      const acc = db.accounts.find(a => a.id === accId);
-      if (acc) account = { id: acc.id, coins: acc.coins, name: acc.name };
-    }
+    const account = await findAccountByIdMySQL(accId);
     if (!account) {
       return res.status(401).json({ message: "Sessão expirada ou inválida." });
     }
 
+    // Require Recovery Key verification
+    if (!account.hasRecoveryKey || !recoveryKey) {
+      return res.status(400).json({ message: "Você precisa informar sua Recovery Key (RK) para colocar o personagem à venda!" });
+    }
+    const cleanInputKey = (recoveryKey || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+    const cleanStoredKey = (account.recovery_key || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+    if (cleanInputKey !== cleanStoredKey) {
+      return res.status(400).json({ message: "Recovery Key (RK) incorreta! Verifique os caracteres e tente novamente." });
+    }
+
+    // Require Email confirmation
+    if (isEmailConfirmed === false) {
+      return res.status(400).json({ message: "Você precisa confirmar seu E-mail antes de anunciar um personagem no Bazar." });
+    }
+
+    // Require Phone confirmation
+    if (!account.isPhoneConfirmed && !isPhoneConfirmed) {
+      return res.status(400).json({ message: "Você precisa confirmar seu número de Celular antes de anunciar um personagem no Bazar." });
+    }
+
     if (account.coins < listingFee) {
-      return res.status(400).json({ message: `Saldo de coins insuficiente! O Bazaar cobra uma taxa administrativa de 10% (${listingFee} Coins) para anunciar este herói por ${listPrice} Coins. Seu saldo é de ${account.coins} Coins.` });
+      return res.status(400).json({ message: `Saldo de coins insuficiente! O Bazar cobra uma taxa administrativa de 10% (${listingFee} Coins) para anunciar este herói por ${listPrice} Coins. Seu saldo atual é de ${account.coins} Coins.` });
     }
 
     const player = await findPlayerByNameMySQL(characterName);
@@ -2126,13 +2461,13 @@ async function startServer() {
       await pool.query("UPDATE players SET account_id = NULL WHERE id = ?", [player.id]);
     }
 
-    auditLog("BAZAAR ACTION: account [{}] listed character {} for {} coins", accId, characterName, listPrice);
+    auditLog("BAZAAR ACTION: account [{}] listed character {} for {} coins (fee: {} coins)", accId, characterName, listPrice, listingFee);
 
     const updatedChars = await findPlayersByAccount(accId);
     const bazaarListings = await getBazaarMySQL();
 
     res.json({
-      message: `O herói '${characterName}' foi anunciado no Bazaar por ${listPrice} Coins! Uma taxa de 10% (${listingFee} Coins) foi debitada do seu saldo.`,
+      message: `O herói '${characterName}' foi anunciado no Bazar por ${listPrice} Coins! Uma taxa de 10% (${listingFee} Coins) foi debitada do seu saldo.`,
       coins: account.coins,
       characters: updatedChars,
       bazaarListings

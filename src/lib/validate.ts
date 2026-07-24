@@ -4,11 +4,8 @@ export const emailSchema = z.string().email().max(255);
 
 export const passwordSchema = z
   .string()
-  .min(8, "A senha deve ter no mínimo 8 caracteres")
-  .max(128, "A senha deve ter no máximo 128 caracteres")
-  .regex(/[A-Z]/, "Deve conter pelo menos uma letra maiúscula")
-  .regex(/[a-z]/, "Deve conter pelo menos uma letra minúscula")
-  .regex(/[0-9]/, "Deve conter pelo menos um número");
+  .min(6, "A senha deve ter no mínimo 6 caracteres")
+  .max(128, "A senha deve ter no máximo 128 caracteres");
 
 export const characterNameSchema = z
   .string()
